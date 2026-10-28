@@ -63,7 +63,11 @@ img { display:block; max-width:100%; object-fit:cover; }
 .toolbar-date { display:flex; align-items:center; gap:9px; color:var(--text-muted); font-size:13px; }
 .toolbar-date .ph { font-size:17px; }
 .date-navigator { display:flex; align-items:center; gap:2px; }
-.date-navigator input { width:135px; font-size:14px; padding:6px 8px; background:transparent; border:0; }
+.date-picker-btn { position:relative; display:inline-grid; place-items:center; width:36px; height:36px; border-radius:50%; color:var(--text-muted); cursor:pointer; }
+.date-picker-btn:hover { background:var(--surface-subtle); color:var(--text-main); }
+.date-picker-btn .ph { font-size:18px; }
+.date-picker-btn input { position:absolute; inset:0; width:100%; height:100%; padding:0; border:0; opacity:0; cursor:pointer; }
+.date-picker-btn:focus-within { outline:2px solid var(--accent); outline-offset:2px; }
 .nav-arrow { width:28px; height:32px; }
 .nav-arrow .ph { font-size:14px; }
 .pill-btn-sm { margin-left:9px; padding:6px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; }
@@ -234,8 +238,6 @@ img { display:block; max-width:100%; object-fit:cover; }
   .segment-badge { font-size:12px; min-width:18px; padding:0 5px; }
   .page-toolbar { padding:19px 0; }
   .toolbar-date { font-size:12px; gap:6px; }
-  .toolbar-date .ph { display:none; }
-  .date-navigator input { width:112px; font-size:14px; padding:4px; }
   .input-with-action input,.expandable-input input,.clean-input,.clean-textarea,.search-field input { font-size:16px; }
   .date-navigator .nav-arrow { width:23px; }
   .pill-btn-sm { font-size:13px; padding:5px 8px; margin-left:4px; }
@@ -282,7 +284,7 @@ img { display:block; max-width:100%; object-fit:cover; }
   .hero-copy h1 { font-size:33px; }
   .hero-photo { height:132px; }
   .hero-photo img { object-position:50% 58%; }
-  .toolbar-date { max-width:110px; line-height:1.5; }
+  .toolbar-date { min-width:0; line-height:1.4; }
   .segment-tab { gap:6px; padding:0 3px; }
   .segment-tab .ph { font-size:17px; }
   .dishes-choice-grid { gap:9px; }
@@ -291,12 +293,12 @@ img { display:block; max-width:100%; object-fit:cover; }
   #viewAllOrdersBtn { margin-left:0; width:100%; justify-content:flex-start; margin-top:6px; }
 }
 @media (pointer:coarse) {
-  .circle-btn,.circle-btn-sm { width:44px; height:44px; }
+  .circle-btn,.circle-btn-sm,.date-picker-btn { width:44px; height:44px; }
   .nav-arrow { position:relative; height:44px; }
   .nav-arrow::after { content:''; position:absolute; inset:0 -8px; }
   .pill-btn-sm,.btn-solid-sm,.btn-sm,.btn-subtle,.btn-danger-subtle,.tag-pill,.menu-dish-action,.text-link-btn,.hero-link { min-height:44px; }
   .seg-item span { display:flex; align-items:center; justify-content:center; min-height:44px; }
-  .clean-checkbox,.date-navigator input { min-height:44px; }
+  .clean-checkbox { min-height:44px; }
   .clean-checkbox input { width:20px; height:20px; }
 }
 @media (prefers-reduced-motion:reduce) {

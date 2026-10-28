@@ -39,6 +39,12 @@
     const d = new Date(iso + "T12:00:00Z");
     return `${WEEKDAY[d.getUTCDay()]} ${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
   }
+  // Native date inputs follow the browser locale (10/28/2026 on en-US), so show dd/mm/yyyy ourselves.
+  function fullDate(iso) {
+    const [y, m, d] = iso.split("-");
+    const weekday = WEEKDAY[new Date(iso + "T12:00:00Z").getUTCDay()];
+    return `${weekday.charAt(0).toUpperCase() + weekday.slice(1)}, ${d}/${m}/${y}`;
+  }
   const cleanName = (s) => (s || "").trim().replace(/\s+/g, " ");
 
   const myName = () => (myId && people.get(myId) && people.get(myId).name) || localStorage.getItem("com_trua_user_name") || "";
@@ -309,7 +315,7 @@
     $("dateInput").value = date;
     const isToday = date === todayVN();
     $("todayBtn").setAttribute("aria-pressed", String(isToday));
-    $("pageDateLabel").textContent = prettyDate(date);
+    $("pageDateLabel").textContent = (isToday ? "Hôm nay · " : "") + fullDate(date);
     const notice = $("globalNotice"); notice.hidden = !loadFailed;
     if (loadFailed && !notice.childElementCount) {
       const text = document.createElement("span"); text.textContent = "Chưa thể kết nối. Dữ liệu đã lưu có thể chưa phải mới nhất.";
@@ -852,6 +858,7 @@
   }
 
   $("dateInput").addEventListener("change", (e) => gotoDate(e.target.value));
+  $("dateInput").addEventListener("click", (e) => { try { e.target.showPicker(); } catch {} });
   $("prevDay").addEventListener("click", () => gotoDate(shiftDate(date, -1)));
   $("nextDay").addEventListener("click", () => gotoDate(shiftDate(date, 1)));
   $("todayBtn").addEventListener("click", () => gotoDate(todayVN()));
