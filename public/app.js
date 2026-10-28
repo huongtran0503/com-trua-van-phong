@@ -242,7 +242,37 @@
     render();
   }
 
-  // ---------- Rendering Logic ----------
+  // ---------- Rendering Logic & Tab Navigation ----------
+  let currentTab = "order";
+
+  function switchTab(t) {
+    currentTab = t;
+    const tabs = [
+      { id: "order", btn: $("tabOrderBtn"), view: $("viewOrder") },
+      { id: "menu", btn: $("tabMenuBtn"), view: $("viewMenu") },
+      { id: "ordersList", btn: $("tabOrdersListBtn"), view: $("viewOrdersList") }
+    ];
+
+    tabs.forEach(item => {
+      const isAct = item.id === t;
+      if (item.btn) {
+        item.btn.classList.toggle("active", isAct);
+        item.btn.setAttribute("aria-selected", isAct ? "true" : "false");
+      }
+      if (item.view) {
+        item.view.hidden = !isAct;
+        item.view.classList.toggle("active", isAct);
+      }
+    });
+
+    if (t === "menu") {
+      renderMenuTab();
+    } else if (t === "ordersList") {
+      renderList();
+      renderMessage();
+    }
+  }
+
   function canLock() {
     return isPoster() || (orders.length > 0 && orders.some(o => o.createdBy === myId || o.forUser === myId));
   }
@@ -261,6 +291,13 @@
     const locked = !!(menu && menu.locked);
     const hasMenu = !!(menu && menu.dishes && menu.dishes.length);
 
+    // Update Tab Badges
+    const menuBadge = $("menuCountBadge");
+    if (menuBadge) menuBadge.textContent = `${menu?.dishes?.length || 0} món`;
+
+    const ordersBadge = $("ordersCountBadge");
+    if (ordersBadge) ordersBadge.textContent = `${orders.length} suất`;
+
     // Status Pill
     const pill = $("statusPill");
     const stext = $("statusText");
@@ -275,20 +312,152 @@
       stext.textContent = `Đang mở đặt món (${orders.length} suất)`;
     }
 
-    // Panels visibility
-    $("menuEditor").hidden = hasMenu && !editingMenu;
-    $("orderForm").hidden = !hasMenu || editingMenu;
-
+    // Panels visibility in Menu Tab
+    const menuEd = $("menuEditor");
+    if (menuEd) {
+      menuEd.hidden = !editingMenu;
+    }
     if (!hasMenu || editingMenu) {
       $("menuDateLabel").textContent = prettyDate(date);
     }
 
-    if (hasMenu && !editingMenu) {
-      renderOrderForm();
-    }
-
+    renderOrderForm();
+    renderMyOrderSummary();
+    renderMenuTab();
     renderList();
     renderMessage();
+  }
+
+  function renderMyOrderSummary() {
+    const myOrder = orders.find(o => o.createdBy === myId || (o.forUser && o.forUser === myId));
+    const noHint = $("noMyOrderHint");
+    const hasBox = $("hasMyOrderBox");
+    const ticket = $("myOrderTicket");
+
+    if (myOrder) {
+      if (noHint) noHint.hidden = true;
+      if (hasBox) hasBox.hidden = false;
+      if (ticket) {
+        ticket.innerHTML = `
+          <div style="font-weight:700;color:var(--primary);margin-bottom:2px">${displayName(myOrder)}</div>
+          <div>${orderLine(myOrder)}</div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-top:4px">
+            🕒 Đặt lúc ${new Date(myOrder.createdAt || Date.now()).toLocaleTimeString("vi-VN", {hour:"2-digit", minute:"2-digit"})}
+          </div>
+        `;
+      }
+    } else {
+      if (noHint) noHint.hidden = false;
+      if (hasBox) hasBox.hidden = true;
+    }
+  }
+
+  function renderMenuTab() {
+    const locked = !!(menu && menu.locked);
+    const dishes = (menu && menu.dishes) || [];
+
+    // Header info
+    $("menuCoverDate").textContent = prettyDate(date);
+    const poster = menu && menu.postedBy ? (people.get(menu.postedBy) ? people.get(menu.postedBy).name : "Đồng nghiệp") : "Đồng nghiệp";
+    $("menuCoverPoster").textContent = poster;
+    $("menuCoverDishCount").textContent = `${dishes.length} món ăn`;
+    $("menuShowcaseCount").textContent = dishes.length;
+
+    const st = $("menuCoverStatus");
+    if (st) {
+      if (locked) {
+        st.textContent = "Đã chốt nhận đơn";
+        st.className = "menu-cover-status locked";
+      } else {
+        st.textContent = "Đang nhận đơn";
+        st.className = "menu-cover-status";
+      }
+    }
+
+    if (menu && menu.updatedAt) {
+      const dt = new Date(menu.updatedAt);
+      $("menuCoverUpdate").textContent = `Cập nhật lúc ${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
+    } else {
+      $("menuCoverUpdate").textContent = "";
+    }
+
+    // Popularity counts
+    const dishCounts = {};
+    orders.forEach(o => {
+      (o.dishes || []).forEach(d => {
+        dishCounts[d] = (dishCounts[d] || 0) + 1;
+      });
+    });
+
+    // Render Grid
+    const grid = $("menuDishesGrid");
+    if (!grid) return;
+    grid.replaceChildren();
+
+    if (!dishes.length) {
+      const empty = document.createElement("div");
+      empty.style.gridColumn = "1 / -1";
+      empty.className = "empty";
+      empty.innerHTML = `
+        <div class="empty-icon">📋</div>
+        <strong>Chưa có thực đơn cho ngày này</strong>
+        <span>Hãy bấm "Soạn / Chỉnh sửa thực đơn" để nhập các món ăn hôm nay.</span>
+      `;
+      grid.appendChild(empty);
+      return;
+    }
+
+    dishes.forEach((dish, idx) => {
+      const count = dishCounts[dish] || 0;
+      const card = document.createElement("div");
+      card.className = "menu-dish-card";
+      card.title = `Bấm để chọn món "${dish}" và chuyển sang Đặt cơm`;
+
+      const header = document.createElement("div");
+      header.className = "menu-dish-header";
+
+      const numBadge = document.createElement("span");
+      numBadge.className = "dish-num-badge";
+      numBadge.textContent = idx + 1;
+
+      const popBadge = document.createElement("span");
+      popBadge.className = "dish-popularity-badge" + (count > 0 ? " hot" : "");
+      popBadge.textContent = count > 0 ? `🔥 ${count} người chọn` : "Chưa ai chọn";
+
+      header.appendChild(numBadge);
+      header.appendChild(popBadge);
+
+      const nameEl = document.createElement("div");
+      nameEl.className = "menu-dish-name";
+      nameEl.textContent = dish;
+
+      const actionRow = document.createElement("div");
+      actionRow.className = "menu-dish-action";
+
+      const isChosen = selected.includes(dish);
+      const actionLabel = document.createElement("span");
+      actionLabel.className = "menu-dish-action-label";
+      actionLabel.innerHTML = isChosen ? `✓ Đã chọn trong đơn` : `🍙 Chọn món này ➜`;
+
+      actionRow.appendChild(actionLabel);
+
+      card.appendChild(header);
+      card.appendChild(nameEl);
+      card.appendChild(actionRow);
+
+      card.addEventListener("click", () => {
+        if (!selected.includes(dish)) {
+          selected.push(dish);
+        }
+        switchTab("order");
+        renderOrderForm();
+        toast(`Đã chọn: ${dish}`);
+        const chipEl = document.querySelector(`.dish-chip[data-dish="${dish}"]`);
+        if (chipEl) chipEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+
+      grid.appendChild(card);
+    });
   }
 
   function renderOrderForm() {
@@ -784,6 +953,64 @@
       fetchDateState(date, true);
     }
   });
+
+  // ---------- Tab Navigation Event Listeners ----------
+  if ($("tabOrderBtn")) $("tabOrderBtn").addEventListener("click", () => switchTab("order"));
+  if ($("tabMenuBtn")) $("tabMenuBtn").addEventListener("click", () => switchTab("menu"));
+  if ($("tabOrdersListBtn")) $("tabOrdersListBtn").addEventListener("click", () => switchTab("ordersList"));
+  if ($("goToOrderTabBtn")) $("goToOrderTabBtn").addEventListener("click", () => switchTab("order"));
+  if ($("viewFullMenuBtn")) $("viewFullMenuBtn").addEventListener("click", () => switchTab("menu"));
+  if ($("viewAllOrdersBtn")) $("viewAllOrdersBtn").addEventListener("click", () => switchTab("ordersList"));
+
+  // Menu Tab Action Listeners
+  if ($("toggleEditMenuTabBtn")) {
+    $("toggleEditMenuTabBtn").addEventListener("click", () => {
+      editingMenu = !editingMenu;
+      $("menuEditor").hidden = !editingMenu;
+      if (editingMenu) {
+        $("menuText").value = (menu && menu.dishes ? menu.dishes.join("\n") : "");
+        $("menuDateLabel").textContent = prettyDate(date);
+        $("menuText").focus();
+      }
+    });
+  }
+
+  if ($("closeMenuEditorBtn")) {
+    $("closeMenuEditorBtn").addEventListener("click", () => {
+      editingMenu = false;
+      $("menuEditor").hidden = true;
+    });
+  }
+
+  if ($("quickSampleMenuTabBtn")) {
+    $("quickSampleMenuTabBtn").addEventListener("click", () => {
+      editingMenu = true;
+      $("menuEditor").hidden = false;
+      $("sampleMenuBtn").click();
+      $("menuDateLabel").textContent = prettyDate(date);
+      $("menuText").focus();
+    });
+  }
+
+  // My Order Summary buttons
+  if ($("editMyOrderBtn")) {
+    $("editMyOrderBtn").addEventListener("click", () => {
+      const myOrder = orders.find(o => o.createdBy === myId || (o.forUser && o.forUser === myId));
+      if (myOrder) {
+        switchTab("order");
+        startEdit(myOrder);
+      }
+    });
+  }
+
+  if ($("deleteMyOrderBtn")) {
+    $("deleteMyOrderBtn").addEventListener("click", () => {
+      const myOrder = orders.find(o => o.createdBy === myId || (o.forUser && o.forUser === myId));
+      if (myOrder) {
+        deleteOrder(myOrder);
+      }
+    });
+  }
 
   // ---------- Init ----------
   initWebSocket();

@@ -73,222 +73,335 @@
   <!-- Connectivity / Notice -->
   <div id="globalNotice" class="notice" hidden></div>
 
-  <!-- Main 2-Column Grid -->
-  <div class="cols">
-    <!-- LEFT: Menu Editor & Order Form -->
-    <section class="panel" id="orderPanel">
-      <!-- 1. Menu Editor -->
-      <div id="menuEditor" hidden style="display:flex;flex-direction:column;gap:14px">
-        <div class="panel-header">
-          <div class="panel-title">
-            <span>Nhập thực đơn ngày</span> <span id="menuDateLabel" style="color:var(--primary);font-weight:700"></span>
-          </div>
-        </div>
+  <!-- Main Navigation Tabs -->
+  <nav class="main-tabs" role="tablist" aria-label="Điều hướng các phân hệ">
+    <button class="tab-btn active" id="tabOrderBtn" role="tab" aria-selected="true" aria-controls="viewOrder">
+      <span class="tab-icon">🍙</span>
+      <span class="tab-text">Đặt cơm</span>
+    </button>
+    <button class="tab-btn" id="tabMenuBtn" role="tab" aria-selected="false" aria-controls="viewMenu">
+      <span class="tab-icon">📋</span>
+      <span class="tab-text">Thực đơn hôm nay</span>
+      <span class="tab-badge" id="menuCountBadge">6 món</span>
+    </button>
+    <button class="tab-btn" id="tabOrdersListBtn" role="tab" aria-selected="false" aria-controls="viewOrdersList">
+      <span class="tab-icon">🍱</span>
+      <span class="tab-text">Danh sách đơn</span>
+      <span class="tab-badge" id="ordersCountBadge">0 suất</span>
+    </button>
+  </nav>
 
-        <div class="field">
-          <label class="label" for="menuText">Danh sách món ăn hôm nay</label>
-          <textarea id="menuText" placeholder="Dán thực đơn từ quán gửi, mỗi món một dòng:&#10;Bò xào tiêu đen rau củ&#10;Gà chiên nước mắm&#10;Sườn xào chua ngọt&#10;Canh cải thịt băm"></textarea>
-          <div style="display:flex;gap:6px;align-items:center;margin-top:2px">
-            <span class="hint-line">Gợi ý nhanh:</span>
-            <button type="button" class="small ghost" id="sampleMenuBtn" style="padding:1px 6px;font-size:0.75rem">+ Điền thực đơn mẫu</button>
-          </div>
-        </div>
-
-        <div class="spread">
-          <button class="ghost small" id="reuseMenuBtn" hidden>📋 Dùng lại thực đơn cũ</button>
-          <div class="row end" style="margin-left:auto">
-            <button class="small" id="cancelMenuBtn" hidden>Hủy</button>
-            <button class="primary" id="saveMenuBtn">Lưu thực đơn</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 2. Order Form -->
-      <div id="orderForm" hidden style="display:flex;flex-direction:column;gap:18px">
-        <div class="panel-header">
-          <div class="panel-title">
-            <span id="formTitle">Đặt cơm</span>
-          </div>
-          <div class="panel-actions">
-            <button class="ghost small" id="editMenuBtn">Sửa thực đơn</button>
-          </div>
-        </div>
-
-        <p class="poster-line" id="posterLine"></p>
-
-        <!-- Lock Notice -->
-        <div id="lockNotice" class="notice" hidden>
-          <span id="lockNoticeText">Đơn ngày này đã chốt.</span>
-          <div><button class="small" id="unlockBtn">Mở lại nhận đơn</button></div>
-        </div>
-
-        <!-- 🌟 PROMINENT NAME SECTION (TÊN NGƯỜI ĐẶT CƠM) - Giảm bớt nổi bật -->
-        <div class="name-card-box" id="meField">
-          <div class="spread">
-            <label class="label" style="margin:0;color:var(--ink);font-weight:700">
-              Tên người đặt cơm
-            </label>
-            <span style="font-size:0.74rem;color:var(--muted);font-weight:500">Tự động ghi nhớ</span>
-          </div>
-
-          <!-- When inputting name -->
-          <div id="meEdit" style="display:flex;flex-direction:column;gap:6px">
-            <div class="row" style="gap:8px">
-              <input type="text" id="nameInput" placeholder="Nhập tên của bạn (VD: Hương Trần, Nam KT...)" autocomplete="name" maxlength="40" style="flex:1 1 200px;background:var(--surface);font-weight:600" aria-label="Tên của bạn">
-              <button class="secondary small" id="saveNameBtn">Lưu tên</button>
-              <button class="ghost small" id="cancelNameBtn" hidden>Hủy</button>
-            </div>
-            <span class="hint-line" id="nameMsg">Nhập tên một lần, hệ thống sẽ tự lưu cho các bữa sau.</span>
-          </div>
-
-          <!-- When name is saved -->
-          <div class="user-profile-badge" id="meView" hidden>
-            <div class="user-profile-info">
-              <div class="user-avatar-sm" id="meAvatar">T</div>
-              <div>
-                <div class="hint-line" style="font-size:0.72rem">Người đặt:</div>
-                <div class="user-name-text" id="meName"></div>
+  <!-- TAB VIEWS CONTAINER -->
+  <div class="tab-views">
+    <!-- ========================================== -->
+    <!-- VIEW 1: ĐẶT CƠM (Order Form) -->
+    <!-- ========================================== -->
+    <section class="tab-view active" id="viewOrder" role="tabpanel" aria-labelledby="tabOrderBtn">
+      <div class="cols">
+        <!-- Main Order Form (Left) -->
+        <div class="panel" id="orderPanel">
+          <div id="orderForm" style="display:flex;flex-direction:column;gap:18px">
+            <div class="panel-header">
+              <div class="panel-title">
+                <span id="formTitle">Đặt cơm</span>
+              </div>
+              <div class="panel-actions">
+                <button type="button" class="ghost small" id="viewFullMenuBtn" title="Xem bảng thực đơn chi tiết">Xem thực đơn đầy đủ 📋</button>
+                <button class="ghost small" id="editMenuBtn" hidden>Sửa thực đơn</button>
               </div>
             </div>
-            <button class="ghost small" id="renameBtn">Đổi tên ✏️</button>
-          </div>
 
-          <!-- Order for Other Colleague -->
-          <div style="border-top:1px dashed var(--line-subtle);padding-top:6px;margin-top:2px;display:flex;flex-direction:column;gap:6px">
-            <label class="check-wrap" id="forOtherWrap">
-              <input type="checkbox" id="forOther">
-              <span>Đặt hộ người khác</span>
-            </label>
-            <div id="otherNameWrap" hidden>
-              <input type="text" id="otherName" list="peopleList" placeholder="Nhập tên người được đặt hộ (VD: Lan Anh, Minh Tuấn)" maxlength="40" style="background:var(--surface)" aria-label="Tên người được đặt hộ">
-              <datalist id="peopleList"></datalist>
+            <p class="poster-line" id="posterLine"></p>
+
+            <!-- Lock Notice -->
+            <div id="lockNotice" class="notice" hidden>
+              <span id="lockNoticeText">Đơn ngày này đã chốt.</span>
+              <div><button class="small" id="unlockBtn">Mở lại nhận đơn</button></div>
+            </div>
+
+            <!-- PROMINENT NAME SECTION -->
+            <div class="name-card-box" id="meField">
+              <div class="spread">
+                <label class="label" style="margin:0;color:var(--ink);font-weight:700">
+                  Tên người đặt cơm
+                </label>
+                <span style="font-size:0.74rem;color:var(--muted);font-weight:500">Tự động ghi nhớ</span>
+              </div>
+
+              <!-- When inputting name -->
+              <div id="meEdit" style="display:flex;flex-direction:column;gap:6px">
+                <div class="row" style="gap:8px">
+                  <input type="text" id="nameInput" placeholder="Nhập tên của bạn (VD: Hương Trần, Nam KT...)" autocomplete="name" maxlength="40" style="flex:1 1 200px;background:var(--surface);font-weight:600" aria-label="Tên của bạn">
+                  <button class="secondary small" id="saveNameBtn">Lưu tên</button>
+                  <button class="ghost small" id="cancelNameBtn" hidden>Hủy</button>
+                </div>
+                <span class="hint-line" id="nameMsg">Nhập tên một lần, hệ thống sẽ tự lưu cho các bữa sau.</span>
+              </div>
+
+              <!-- When name is saved -->
+              <div class="user-profile-badge" id="meView" hidden>
+                <div class="user-profile-info">
+                  <div class="user-avatar-sm" id="meAvatar">T</div>
+                  <div>
+                    <div class="hint-line" style="font-size:0.72rem">Người đặt:</div>
+                    <div class="user-name-text" id="meName"></div>
+                  </div>
+                </div>
+                <button class="ghost small" id="renameBtn">Đổi tên ✏️</button>
+              </div>
+
+              <!-- Order for Other Colleague -->
+              <div style="border-top:1px dashed var(--line-subtle);padding-top:6px;margin-top:2px;display:flex;flex-direction:column;gap:6px">
+                <label class="check-wrap" id="forOtherWrap">
+                  <input type="checkbox" id="forOther">
+                  <span>Đặt hộ người khác</span>
+                </label>
+                <div id="otherNameWrap" hidden>
+                  <input type="text" id="otherName" list="peopleList" placeholder="Nhập tên người được đặt hộ (VD: Lan Anh, Minh Tuấn)" maxlength="40" style="background:var(--surface)" aria-label="Tên người được đặt hộ">
+                  <datalist id="peopleList"></datalist>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Re-Order Button -->
+            <button class="reorder-badge-btn" id="lastBtn" hidden></button>
+
+            <!-- Dish Selection Chips -->
+            <div class="field">
+              <div class="label">
+                <span>Chọn món</span>
+                <span id="pickCount" style="color:var(--primary);font-weight:600"></span>
+              </div>
+              <div class="chips" id="dishChips"></div>
+            </div>
+
+            <!-- Rice Segmented Options -->
+            <div class="field">
+              <span class="label">Lượng cơm</span>
+              <div class="seg" id="riceSeg" role="radiogroup" aria-label="Lượng cơm">
+                <label><input type="radio" name="rice" value="" id="rice-normal" checked><span>Bình thường</span></label>
+                <label><input type="radio" name="rice" value="it" id="rice-it"><span>Ít cơm</span></label>
+                <label><input type="radio" name="rice" value="nhieu" id="rice-nhieu"><span>Nhiều cơm</span></label>
+                <label><input type="radio" name="rice" value="khong" id="rice-khong"><span>Không cơm</span></label>
+              </div>
+            </div>
+
+            <!-- Note Input with Quick Tag Suggestions -->
+            <div class="field">
+              <label class="label" for="noteInput">Ghi chú riêng</label>
+              <input type="text" id="noteInput" placeholder="VD: không hành, nhiều sốt, canh riêng..." maxlength="120">
+              <div class="quick-tags" id="quickTagList">
+                <button type="button" class="quick-tag-btn" data-tag="Không hành">Không hành</button>
+                <button type="button" class="quick-tag-btn" data-tag="Ít cay">Ít cay</button>
+                <button type="button" class="quick-tag-btn" data-tag="Nhiều nước sốt">Nhiều sốt</button>
+                <button type="button" class="quick-tag-btn" data-tag="Canh riêng">Canh riêng</button>
+                <button type="button" class="quick-tag-btn" data-tag="Ăn sớm">Ăn sớm</button>
+              </div>
+            </div>
+
+            <!-- Order Preview Ticket -->
+            <div class="preview-card" id="previewCardWrap">
+              <div class="preview-badge">Phiếu đặt xem trước</div>
+              <div id="preview"></div>
+            </div>
+
+            <!-- Duplicate Notice -->
+            <div id="dupNotice" class="notice" hidden style="flex-direction:column;align-items:flex-start;gap:8px">
+              <span id="dupText"></span>
+              <div class="row">
+                <button class="small primary" id="dupReplace">Thay đơn cũ</button>
+                <button class="small" id="dupAdd">Thêm suất nữa</button>
+                <button class="small ghost" id="dupCancel">Thôi</button>
+              </div>
+            </div>
+
+            <!-- Submit & Cancel Actions -->
+            <div class="row end" style="margin-top:4px">
+              <button class="ghost" id="cancelEditBtn" hidden>Hủy sửa</button>
+              <button class="primary" id="submitBtn">
+                Đặt cơm ngay
+              </button>
             </div>
           </div>
         </div>
 
-        <!-- Quick Re-Order Button -->
-        <button class="reorder-badge-btn" id="lastBtn" hidden></button>
-
-        <!-- Dish Selection Chips -->
-        <div class="field">
-          <div class="label">
-            <span>Chọn món</span>
-            <span id="pickCount" style="color:var(--primary);font-weight:600"></span>
+        <!-- Right Side of Tab 1: Your Order Summary / Quick status card -->
+        <div class="order-side-col">
+          <div class="panel my-order-panel" id="myOrderSummaryCard">
+            <div class="panel-header">
+              <div class="panel-title">
+                <span>🍙 Đơn của bạn hôm nay</span>
+              </div>
+            </div>
+            <div id="myOrderContent" class="my-order-content">
+              <div class="empty-hint" id="noMyOrderHint">
+                Bạn chưa đặt món cho ngày này. Hãy chọn món và bấm "Đặt cơm ngay"!
+              </div>
+              <div id="hasMyOrderBox" hidden>
+                <div class="my-order-ticket" id="myOrderTicket"></div>
+                <div class="row" style="gap:8px;margin-top:12px">
+                  <button class="small secondary" id="editMyOrderBtn">Sửa đơn</button>
+                  <button class="small ghost" id="deleteMyOrderBtn" style="color:var(--danger)">Hủy đơn</button>
+                  <button class="small ghost" id="viewAllOrdersBtn" style="margin-left:auto">Xem tất cả đơn ➜</button>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="chips" id="dishChips"></div>
-        </div>
 
-        <!-- Rice Segmented Options -->
-        <div class="field">
-          <span class="label">Lượng cơm</span>
-          <div class="seg" id="riceSeg" role="radiogroup" aria-label="Lượng cơm">
-            <label><input type="radio" name="rice" value="" id="rice-normal" checked><span>Bình thường</span></label>
-            <label><input type="radio" name="rice" value="it" id="rice-it"><span>Ít cơm</span></label>
-            <label><input type="radio" name="rice" value="nhieu" id="rice-nhieu"><span>Nhiều cơm</span></label>
-            <label><input type="radio" name="rice" value="khong" id="rice-khong"><span>Không cơm</span></label>
+          <!-- Quick Tip Card -->
+          <div class="tip-card">
+            <div class="tip-icon">💡</div>
+            <div class="tip-text">
+              <strong>Mẹo đặt nhanh:</strong> Bấm vào tab <strong>📋 Thực đơn hôm nay</strong> để xem danh mục món ăn chi tiết và chọn món trực tiếp chỉ với 1 cú click!
+            </div>
           </div>
-        </div>
-
-        <!-- Note Input with Quick Tag Suggestions -->
-        <div class="field">
-          <label class="label" for="noteInput">Ghi chú riêng</label>
-          <input type="text" id="noteInput" placeholder="VD: không hành, nhiều sốt, canh riêng..." maxlength="120">
-          <div class="quick-tags" id="quickTagList">
-            <button type="button" class="quick-tag-btn" data-tag="Không hành">Không hành</button>
-            <button type="button" class="quick-tag-btn" data-tag="Ít cay">Ít cay</button>
-            <button type="button" class="quick-tag-btn" data-tag="Nhiều nước sốt">Nhiều sốt</button>
-            <button type="button" class="quick-tag-btn" data-tag="Canh riêng">Canh riêng</button>
-            <button type="button" class="quick-tag-btn" data-tag="Ăn sớm">Ăn sớm</button>
-          </div>
-        </div>
-
-        <!-- Order Preview Ticket -->
-        <div class="preview-card" id="previewCardWrap">
-          <div class="preview-badge">Phiếu đặt xem trước</div>
-          <div id="preview"></div>
-        </div>
-
-        <!-- Duplicate Notice (if ordering again) -->
-        <div id="dupNotice" class="notice" hidden style="flex-direction:column;align-items:flex-start;gap:8px">
-          <span id="dupText"></span>
-          <div class="row">
-            <button class="small primary" id="dupReplace">Thay đơn cũ</button>
-            <button class="small" id="dupAdd">Thêm suất nữa</button>
-            <button class="small ghost" id="dupCancel">Thôi</button>
-          </div>
-        </div>
-
-        <!-- Submit & Cancel Actions -->
-        <div class="row end" style="margin-top:4px">
-          <button class="ghost" id="cancelEditBtn" hidden>Hủy sửa</button>
-          <button class="primary" id="submitBtn">
-            Đặt cơm ngay
-          </button>
         </div>
       </div>
     </section>
 
-    <!-- RIGHT: Orders List & Output Messages -->
-    <div style="display:flex;flex-direction:column;gap:22px;min-width:0">
-      <!-- Live Orders List -->
-      <section class="panel">
-        <div class="panel-header">
-          <div class="panel-title">
-            <span>Danh sách đã đặt</span>
-          </div>
-          <span class="panel-badge" id="countLabel">0 suất</span>
-        </div>
-
-        <!-- Search Bar -->
-        <div class="search-input-wrap" id="searchWrap" style="display:none">
-          <span class="search-icon">🔍</span>
-          <input type="text" id="orderSearchInput" placeholder="Tìm theo tên đồng nghiệp..." aria-label="Tìm đơn">
-        </div>
-
-        <!-- Orders -->
-        <ol class="orders" id="orderList"></ol>
-
-        <!-- Empty state -->
-        <div class="empty" id="orderEmpty">
-          <div class="empty-icon">🍙</div>
-          <strong>Chưa ai đặt</strong>
-          <span>Đơn của mọi người sẽ xuất hiện ở đây ngay khi bấm Đặt cơm.</span>
-        </div>
-      </section>
-
-      <!-- Subdued Utility Section: Chốt đơn & Xuất tin nhắn -->
-      <section class="panel-utility">
-        <div class="panel-header">
-          <div class="panel-title">
-            <span>📋 Chốt đơn & Xuất tin nhắn</span>
-          </div>
-          <button class="secondary small" id="copyMsgBtn">Copy tin nhắn</button>
-        </div>
-
-        <div class="field">
-          <label class="label" for="msgBox">Tin nhắn gửi nhóm chat (Zalo / Telegram / Teams)</label>
-          <textarea id="msgBox" class="msg" readonly aria-label="Tin nhắn chốt đơn"></textarea>
-        </div>
-
-        <!-- Tally section hidden while retaining DOM IDs for script compatibility -->
-        <div id="tallySection" hidden style="display:none !important">
-          <div class="spread" style="margin-top:2px">
-            <span class="label">Tổng hợp gửi nhà hàng / quán cơm</span>
-            <button class="small" id="copyTallyBtn">Copy tổng hợp</button>
-          </div>
-          <div class="tally-wrap" id="tallyContainer">
-            <dl class="tally" id="tally" style="display:none"></dl>
-            <div id="tallyCards" style="display:flex;flex-direction:column;gap:5px"></div>
+    <!-- ========================================== -->
+    <!-- VIEW 2: THỰC ĐƠN HÔM NAY (Dedicated Menu Tab) -->
+    <!-- ========================================== -->
+    <section class="tab-view" id="viewMenu" role="tabpanel" aria-labelledby="tabMenuBtn" hidden>
+      <div class="menu-tab-container">
+        <!-- Menu Booklet Cover Header -->
+        <div class="menu-cover-card">
+          <div class="menu-cover-decor"></div>
+          <div class="menu-cover-body">
+            <div class="menu-cover-title-row">
+              <div class="menu-cover-badge">BẢNG THỰC ĐƠN HÔM NAY</div>
+              <div class="menu-cover-status" id="menuCoverStatus">Đang nhận đơn</div>
+            </div>
+            <h2 class="menu-cover-date" id="menuCoverDate">Thứ tư, 28/10/2026</h2>
+            <div class="menu-cover-meta">
+              <span>Đăng bởi: <strong id="menuCoverPoster">Đồng nghiệp</strong></span>
+              <span>•</span>
+              <span id="menuCoverDishCount">6 món ăn</span>
+              <span>•</span>
+              <span id="menuCoverUpdate">Cập nhật hôm nay</span>
+            </div>
+            <div class="menu-cover-actions">
+              <button class="primary small" id="goToOrderTabBtn">🍙 Đến trang Đặt cơm</button>
+              <button class="secondary small" id="toggleEditMenuTabBtn">✏️ Soạn / Chỉnh sửa thực đơn</button>
+              <button class="ghost small" id="quickSampleMenuTabBtn">+ Món mẫu</button>
+            </div>
           </div>
         </div>
 
-        <!-- Lock orders footer -->
-        <div class="lock-footer">
-          <span class="lock-hint" id="lockHint"></span>
-          <button id="lockBtn" class="secondary small" style="margin-left:auto">Chốt đơn</button>
+        <!-- Menu Editor Box (Collapsible inside Menu Tab) -->
+        <div class="panel menu-editor-panel" id="menuEditor" hidden>
+          <div class="panel-header">
+            <div class="panel-title">
+              <span>Soạn thảo thực đơn ngày</span> <span id="menuDateLabel" style="color:var(--primary);font-weight:700"></span>
+            </div>
+            <button class="ghost small" id="closeMenuEditorBtn">Đóng ✕</button>
+          </div>
+
+          <div class="field">
+            <label class="label" for="menuText">Danh sách món ăn (Mỗi món một dòng)</label>
+            <textarea id="menuText" rows="6" placeholder="Dán thực đơn từ quán gửi, mỗi món một dòng:&#10;Sườn heo sốt chua ngọt&#10;Bò xào tiêu đen rau củ&#10;Gà ta chiên nước mắm&#10;Cá basa kho tộ&#10;Canh cải thịt băm&#10;Rau muống xào tỏi"></textarea>
+            <div style="display:flex;gap:6px;align-items:center;margin-top:2px">
+              <span class="hint-line">Gợi ý nhanh:</span>
+              <button type="button" class="small ghost" id="sampleMenuBtn" style="padding:1px 6px;font-size:0.75rem">+ Điền thực đơn mẫu</button>
+            </div>
+          </div>
+
+          <div class="spread">
+            <button class="ghost small" id="reuseMenuBtn" hidden>📋 Dùng lại thực đơn cũ</button>
+            <div class="row end" style="margin-left:auto;gap:8px">
+              <button class="small" id="cancelMenuBtn">Hủy</button>
+              <button class="primary" id="saveMenuBtn">Lưu thực đơn</button>
+            </div>
+          </div>
         </div>
-      </section>
-    </div>
+
+        <!-- Menu Dishes Gallery Showcase -->
+        <div class="menu-showcase-wrap">
+          <div class="spread" style="margin-bottom:14px;align-items:center">
+            <h3 class="section-title">Danh sách món ăn hôm nay (<span id="menuShowcaseCount">0</span>)</h3>
+            <span class="hint-line">Bấm vào món bất kỳ để chọn nhanh và đặt cơm</span>
+          </div>
+
+          <div class="menu-dishes-grid" id="menuDishesGrid">
+            <!-- Dynamic dish cards rendered by JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 3: DANH SÁCH ĐƠN & TỔNG HỢP CHỐT SỔ -->
+    <!-- ========================================== -->
+    <section class="tab-view" id="viewOrdersList" role="tabpanel" aria-labelledby="tabOrdersListBtn" hidden>
+      <div class="orders-tab-grid">
+        <!-- LEFT: Live Orders List -->
+        <section class="panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <span>Danh sách đồng nghiệp đã đặt</span>
+            </div>
+            <span class="panel-badge" id="countLabel">0 suất</span>
+          </div>
+
+          <!-- Search Bar -->
+          <div class="search-input-wrap" id="searchWrap" style="display:none">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="orderSearchInput" placeholder="Tìm theo tên đồng nghiệp..." aria-label="Tìm đơn">
+          </div>
+
+          <!-- Orders -->
+          <ol class="orders" id="orderList"></ol>
+
+          <!-- Empty state -->
+          <div class="empty" id="orderEmpty">
+            <div class="empty-icon">🍙</div>
+            <strong>Chưa ai đặt</strong>
+            <span>Đơn của mọi người sẽ xuất hiện ở đây ngay khi bấm Đặt cơm.</span>
+          </div>
+        </section>
+
+        <!-- RIGHT: Summary Tally & Lock/Export -->
+        <div style="display:flex;flex-direction:column;gap:18px">
+          <!-- Tally summary card -->
+          <section class="panel">
+            <div class="panel-header">
+              <div class="panel-title">
+                <span>📊 Tổng hợp số lượng món</span>
+              </div>
+              <button class="secondary small" id="copyTallyBtn">Copy tổng hợp</button>
+            </div>
+            <div class="tally-wrap" id="tallyContainer">
+              <dl class="tally" id="tally" style="display:none"></dl>
+              <div id="tallyCards" style="display:flex;flex-direction:column;gap:5px"></div>
+            </div>
+          </section>
+
+          <!-- Subdued Utility Section: Chốt đơn & Xuất tin nhắn -->
+          <section class="panel-utility">
+            <div class="panel-header">
+              <div class="panel-title">
+                <span>📋 Xuất tin nhắn gửi Zalo/Slack</span>
+              </div>
+              <button class="secondary small" id="copyMsgBtn">Copy tin nhắn</button>
+            </div>
+
+            <div class="field">
+              <label class="label" for="msgBox">Tin nhắn gửi nhóm chat (Zalo / Telegram / Teams)</label>
+              <textarea id="msgBox" class="msg" readonly aria-label="Tin nhắn chốt đơn" rows="7"></textarea>
+            </div>
+
+            <!-- Tally section hidden for DOM ID compatibility -->
+            <div id="tallySection" hidden style="display:none !important"></div>
+
+            <!-- Lock orders footer -->
+            <div class="lock-footer">
+              <span class="lock-hint" id="lockHint"></span>
+              <button id="lockBtn" class="secondary small" style="margin-left:auto">Chốt đơn</button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
   </div>
 </div>
 

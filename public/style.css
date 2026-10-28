@@ -1253,3 +1253,379 @@
   flex-direction: column;
   gap: 14px;
 }
+
+/* ==========================================================================
+   MAIN NAVIGATION TABS (AIZOME MINIMALIST JAPANESE TABS)
+   ========================================================================== */
+.main-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  padding: 6px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto 6px;
+}
+
+.tab-btn {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border: none;
+  background: transparent;
+  color: var(--ink-secondary);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.tab-btn:hover {
+  background: var(--surface-subtle);
+  color: var(--ink);
+}
+
+.tab-btn.active {
+  background: var(--primary);
+  color: var(--primary-ink);
+  box-shadow: 0 2px 8px rgba(43, 82, 130, 0.28);
+}
+
+.tab-btn .tab-icon {
+  font-size: 1.05rem;
+}
+
+.tab-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-subtle);
+  color: var(--primary);
+  transition: all var(--transition);
+}
+
+.tab-btn.active .tab-badge {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+/* Tab Views & Fade In Animation */
+.tab-views {
+  width: 100%;
+}
+
+.tab-view {
+  animation: tabFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tab-view[hidden] {
+  display: none !important;
+}
+
+@keyframes tabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Tab 1 Side Column (Order Summary & Tips) */
+.order-side-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.my-order-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+}
+
+.my-order-ticket {
+  background: var(--surface-subtle);
+  border: 1px dashed var(--primary-border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 0.9rem;
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+.tip-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--primary-light);
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 0.84rem;
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+.tip-icon {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   TAB 2: DEDICATED MENU VIEW (THỰC ĐƠN HÔM NAY)
+   ========================================================================== */
+.menu-tab-container {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* Menu Cover Card (Bìa Thực Đơn Độc Bản Nhật Bản) */
+.menu-cover-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 26px 28px;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.menu-cover-decor {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 140px;
+  height: 100%;
+  opacity: 0.12;
+  background-image: var(--spiral-pattern);
+  background-size: 48px;
+  pointer-events: none;
+  mask-image: linear-gradient(to left, rgba(0,0,0,1), transparent);
+  -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,1), transparent);
+}
+
+.menu-cover-body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.menu-cover-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.menu-cover-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--primary);
+  background: var(--primary-light);
+  border: 1px solid var(--primary-border);
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+}
+
+.menu-cover-status {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+}
+
+.menu-cover-status.locked {
+  color: var(--amber);
+  background: var(--amber-light);
+}
+
+.menu-cover-date {
+  font-family: var(--font-display);
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.menu-cover-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+
+.menu-cover-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+/* Collapsible Menu Editor Panel */
+.menu-editor-panel {
+  animation: tabFadeIn 0.2s ease-out;
+  border: 2px dashed var(--primary-border) !important;
+}
+
+/* Dishes Gallery Grid */
+.menu-showcase-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-dishes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.menu-dish-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all var(--transition);
+  cursor: pointer;
+  position: relative;
+}
+
+.menu-dish-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary-border);
+  box-shadow: 0 6px 18px rgba(43, 82, 130, 0.12);
+}
+
+.menu-dish-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dish-num-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--surface-subtle);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dish-popularity-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-subtle);
+  color: var(--muted);
+}
+
+.dish-popularity-badge.hot {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+[data-theme="dark"] .dish-popularity-badge.hot {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.menu-dish-name {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.4;
+}
+
+.menu-dish-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--line-subtle);
+  padding-top: 10px;
+  margin-top: 4px;
+}
+
+.menu-dish-action-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.menu-dish-card:hover .menu-dish-action-label {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   TAB 3: ORDERS TAB GRID
+   ========================================================================== */
+.orders-tab-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 22px;
+  align-items: flex-start;
+}
+
+@media (max-width: 860px) {
+  .orders-tab-grid {
+    grid-template-columns: 1fr;
+  }
+  .main-tabs {
+    border-radius: var(--radius-md);
+  }
+  .tab-btn {
+    padding: 8px 10px;
+    font-size: 0.82rem;
+    gap: 4px;
+  }
+  .tab-btn .tab-icon {
+    font-size: 0.95rem;
+  }
+}
+
