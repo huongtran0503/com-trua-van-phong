@@ -387,10 +387,11 @@
     $("menuCoverDate").textContent = prettyDate(date);
     $("menuCoverPoster").textContent = people.get(menu?.postedBy)?.name ? "Đăng bởi " + people.get(menu.postedBy).name : "";
     $("menuCoverDishCount").textContent = dishes.length + " món";
+    $("editMenuLabel").textContent = dishes.length ? "Sửa thực đơn" : "Thêm thực đơn";
     $("menuCoverStatus").textContent = !dishes.length ? "Chưa có thực đơn" : locked ? "Đã chốt nhận đơn" : "Đang nhận đơn";
     $("menuCoverStatus").className = "status-pill-green" + (locked ? " locked" : "");
     const grid = $("menuDishesGrid"); grid.replaceChildren();
-    if (!dishes.length) { grid.append(emptyState("Chưa có thực đơn cho ngày này", "Bấm Sửa thực đơn để thêm danh sách món ăn.", "book-open")); return; }
+    if (!dishes.length) { grid.append(emptyState("Chưa có thực đơn cho ngày này", "Bấm Thêm thực đơn hoặc lấy thực đơn hôm trước.", "book-open")); return; }
     dishes.forEach(dish => {
       const card = document.createElement("article"); card.className = "menu-dish-row";
       const copy = document.createElement("div");
@@ -967,7 +968,6 @@
   if ($("tabOrderBtn")) $("tabOrderBtn").addEventListener("click", () => switchTab("order"));
   if ($("tabMenuBtn")) $("tabMenuBtn").addEventListener("click", () => switchTab("menu"));
   if ($("tabOrdersListBtn")) $("tabOrdersListBtn").addEventListener("click", () => switchTab("ordersList"));
-  if ($("goToOrderTabBtn")) $("goToOrderTabBtn").addEventListener("click", () => switchTab("order"));
   if ($("viewFullMenuBtn")) $("viewFullMenuBtn").addEventListener("click", () => switchTab("menu"));
   if ($("viewAllOrdersBtn")) $("viewAllOrdersBtn").addEventListener("click", () => switchTab("ordersList"));
 
@@ -991,15 +991,12 @@
     });
   }
 
-  if ($("quickSampleMenuTabBtn")) {
-    $("quickSampleMenuTabBtn").addEventListener("click", () => {
-      editingMenu = true;
-      $("menuEditor").hidden = false;
-      $("sampleMenuBtn").click();
-      $("menuDateLabel").textContent = prettyDate(date);
-      $("menuText").focus();
-    });
-  }
+  $("quickPrevMenuTabBtn").addEventListener("click", () => {
+    editingMenu = true;
+    $("menuEditor").hidden = false;
+    $("menuDateLabel").textContent = prettyDate(date);
+    $("prevMenuBtn").click();
+  });
 
   // My Order Summary buttons
   if ($("editMyOrderBtn")) {
