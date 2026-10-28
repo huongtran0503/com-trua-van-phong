@@ -120,16 +120,26 @@ img { display:block; max-width:100%; object-fit:cover; }
 .menu-section-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; }
 .menu-section-heading h2 { font-size:24px; font-weight:700; letter-spacing:-.65px; }
 .menu-section-heading p { color:var(--text-muted); font-size:13px; margin-top:4px; }
-.dishes-choice-grid { display:grid; grid-template-columns:1fr; gap:10px; margin-top:24px; }
-.dish-choice-card { display:flex; justify-content:space-between; align-items:center; text-align:left; gap:20px; white-space:normal; padding:18px 20px; min-width:0; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
+.dishes-choice-grid { display:flex; flex-wrap:wrap; gap:10px; margin-top:24px; }
+.dish-choice-card { display:inline-flex; align-items:center; gap:8px; white-space:normal; text-align:left; padding:10px 16px; min-height:44px; max-width:100%; border:1px solid var(--border); border-radius:999px; background:var(--surface); }
 .dish-choice-card:hover { background:var(--surface-subtle); border-color:var(--text-muted); }
-.dish-choice-card.selected { background:var(--accent-soft); border-color:var(--accent); }
-.dish-choice-title { display:block; font-size:16px; font-weight:600; line-height:1.5; overflow-wrap:anywhere; }
-.dish-choice-check { height:28px; width:28px; flex-shrink:0; border:1px solid var(--border); border-radius:50%; display:grid; place-items:center; background:var(--surface); }
-.dish-choice-check .ph { font-size:15px; }
-.selected .dish-choice-check { background:var(--brand); border-color:var(--brand); color:var(--brand-ink); }
+.dish-choice-card.selected { background:var(--brand); border-color:var(--brand); color:var(--brand-ink); }
+.dish-choice-card .ph { font-size:16px; }
+.dish-choice-title { font-size:15px; font-weight:600; line-height:1.35; overflow-wrap:anywhere; }
+.dish-count { font-size:12px; font-weight:600; padding:1px 7px; border-radius:999px; background:var(--surface-subtle); color:var(--text-muted); font-variant-numeric:tabular-nums; }
+.selected .dish-count { background:rgb(255 255 255 / 20%); color:inherit; }
 .dish-choice-card:disabled { opacity:.65; }
-.dish-skeleton { height:66px; background:var(--surface-subtle); border-radius:12px; }
+.dish-skeleton { width:150px; height:44px; background:var(--surface-subtle); border-radius:999px; }
+.team-orders { margin-top:32px; padding-top:24px; border-top:1px solid var(--border); }
+.team-orders-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
+.team-orders-head h3 { font-size:17px; font-weight:700; }
+.team-orders-head h3 .menu-count-label { white-space:nowrap; }
+.team-order-list { list-style:none; margin:0; padding:0; display:grid; gap:6px; }
+.team-order { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 8px; padding:10px 14px; border-radius:10px; font-size:14px; }
+.team-order strong { font-weight:600; }
+.team-order-dishes { color:var(--text-muted); overflow-wrap:anywhere; }
+.team-order.mine { background:var(--accent-soft); }
+.team-order-tag { font-size:12px; font-weight:600; color:var(--accent); }
 .seg-controller { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
 .seg-item { position:relative; cursor:pointer; }
 .seg-item input { position:absolute; width:1px; height:1px; opacity:0; }
@@ -255,13 +265,9 @@ img { display:block; max-width:100%; object-fit:cover; }
   .customer-section .input-with-action { max-width:460px; }
   .menu-section-heading h2 { font-size:21px; }
   .menu-section-heading { margin-bottom:16px; }
-  .dishes-choice-grid { gap:9px; }
-  .dish-choice-title { font-size:15px; }
-  .dish-choice-card { padding:15px 16px; }
   .menu-dishes-list { grid-template-columns:1fr; width:100%; }
   .menu-dish-row { gap:15px; }
   .menu-dish-name { font-size:15px; }
-  .dish-choice-check { height:26px; width:26px; }
   .seg-controller { grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; }
   .seg-item span { font-size:13px; padding:10px 2px; }
   .tag-pill { padding:7px 12px; }
@@ -288,8 +294,6 @@ img { display:block; max-width:100%; object-fit:cover; }
   .toolbar-date { min-width:0; line-height:1.4; }
   .segment-tab { gap:6px; padding:0 3px; }
   .segment-tab .ph { font-size:17px; }
-  .dishes-choice-grid { gap:9px; }
-  .dish-choice-check { height:24px; width:24px; }
   .seg-controller { grid-template-columns:repeat(2,minmax(0,1fr)); }
   #viewAllOrdersBtn { margin-left:0; width:100%; justify-content:flex-start; margin-top:6px; }
 }

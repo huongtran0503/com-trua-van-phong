@@ -362,6 +362,7 @@
     $("dishTotalLabel").textContent = `${menu?.dishes?.length || 0} món`;
     renderOrderForm();
     renderMyOrderSummary();
+    renderTeamOrders();
     renderMenuTab();
     renderList();
     renderMessage();
@@ -488,14 +489,31 @@
       card.className = "dish-choice-card" + (chosen ? " selected" : ""); card.dataset.dish = dish;
       card.disabled = locked || busy; card.setAttribute("aria-pressed", String(chosen)); card.setAttribute("aria-label", dish);
       const name = document.createElement("span"); name.className = "dish-choice-title"; name.textContent = dish;
-      const check = document.createElement("span"); check.className = "dish-choice-check"; check.append(icon(chosen ? "check" : "plus"));
-      card.append(name, check);
+      if (chosen) card.append(icon("check"));
+      card.append(name);
+      const count = orders.filter(o => o.dishes?.includes(dish)).length;
+      if (count) { const badge = document.createElement("span"); badge.className = "dish-count"; badge.textContent = "×" + count; badge.title = count + " người đã chọn"; card.append(badge); }
       card.addEventListener("click", () => {
         selected = selected.includes(dish) ? selected.filter(d => d !== dish) : [...selected, dish];
         fieldError("dishError", ""); fieldError("submitError", ""); renderDishChips(locked); renderPreview();
       });
       wrap.append(card); if (focused === dish) card.focus({ preventScroll: true });
     });
+  }
+
+  // Order page: everyone's picks at a glance, own order highlighted, one-tap copy for the group chat.
+  function renderTeamOrders() {
+    $("teamOrders").hidden = !orders.length;
+    $("teamCount").textContent = orders.length ? `· ${orders.length} suất` : "";
+    const mine = ownOrder();
+    $("teamOrderList").replaceChildren(...orders.map(o => {
+      const li = document.createElement("li"); li.className = "team-order" + (o === mine ? " mine" : "");
+      const who = document.createElement("strong"); who.textContent = displayName(o);
+      li.append(who);
+      if (o === mine) { const tag = document.createElement("span"); tag.className = "team-order-tag"; tag.textContent = "Bạn"; li.append(tag); }
+      const what = document.createElement("span"); what.className = "team-order-dishes"; what.textContent = orderLine(o);
+      li.append(what); return li;
+    }));
   }
 
   function renderPreview() {
@@ -846,6 +864,7 @@
   }
 
   $("copyMsgBtn").addEventListener("click", () => copyText(messageText(), "Đã copy tin nhắn!"));
+  $("copyTeamMsgBtn").addEventListener("click", () => copyText(messageText(), "Đã copy tin nhắn!"));
 
   // Date Navigation
   function gotoDate(d) {
