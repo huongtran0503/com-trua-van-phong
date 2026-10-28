@@ -1,12 +1,18 @@
 {
   "name": "com-trua-van-phong",
   "version": "1.0.0",
-  "description": "Ứng dụng đặt cơm trưa văn phòng Realtime - Phong cách Nhật Bản tối giản Xanh dương chàm, Trắng hạt gạo, Đen lá rong",
+  "description": "Ứng dụng đặt cơm trưa văn phòng Realtime - Phong cách Nhật Bản tinh gọn Xanh dương chàm, Trắng hạt gạo, Đen lá rong",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/huongtran0503/com-trua-van-phong.git"
+  },
+  "author": "huongtran0503",
+  "license": "ISC",
   "dependencies": {
     "express": "^4.21.2",
     "ws": "^8.18.0"
@@ -15,8 +21,7 @@
     "lunch",
     "office",
     "realtime",
-    "onigiri"
-  ],
-  "author": "Antigravity",
-  "license": "ISC"
+    "onigiri",
+    "japanese-minimalism"
+  ]
 }
