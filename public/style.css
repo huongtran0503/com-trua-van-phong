@@ -183,6 +183,7 @@ img { display:block; max-width:100%; object-fit:cover; }
 .editor-header { margin-bottom:16px; }
 .editor-title { font-size:16px; }
 .editor-footer { margin-top:18px; flex-wrap:wrap; }
+.editor-fill { display:flex; align-items:center; flex-wrap:wrap; gap:8px 16px; }
 .clean-textarea { font-size:15px; line-height:1.8; }
 .menu-dishes-list { display:grid; grid-template-columns:1fr; max-width:840px; }
 .menu-dish-row { display:flex; align-items:center; justify-content:space-between; gap:24px; padding:22px 0; border-bottom:1px solid var(--border); }

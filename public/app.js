@@ -819,6 +819,22 @@
     finally { $("saveMenuBtn").disabled = false; $("saveMenuBtn").textContent = "Lưu thực đơn"; }
   });
 
+  // Copy the most recent earlier menu into the editor (looks back a week so Monday finds Friday). Not saved until "Lưu".
+  $("prevMenuBtn").addEventListener("click", async () => {
+    const btn = $("prevMenuBtn"); btn.disabled = true; fieldError("menuError", "");
+    try {
+      for (let i = 1; i <= 7; i++) {
+        const d = shiftDate(date, -i);
+        const res = await fetch(`/api/state?date=${d}&_t=${Date.now()}`);
+        if (!res.ok) throw new Error("Chưa lấy được thực đơn. Kiểm tra kết nối rồi thử lại.");
+        const dishes = (await res.json()).menu?.dishes || [];
+        if (dishes.length) { $("menuText").value = dishes.join("\n"); $("menuText").focus(); toast(`Đã lấy thực đơn ${prettyDate(d)}`); return; }
+      }
+      fieldError("menuError", "Không có thực đơn nào trong 7 ngày trước.");
+    } catch (err) { fieldError("menuError", err instanceof TypeError ? "Chưa lấy được thực đơn. Kiểm tra kết nối rồi thử lại." : err.message); }
+    finally { btn.disabled = false; }
+  });
+
   $("sampleMenuBtn").addEventListener("click", () => {
     $("menuText").value = [
       "Sườn heo sốt chua ngọt",

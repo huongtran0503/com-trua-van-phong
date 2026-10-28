@@ -102,6 +102,8 @@ const fixture = (date) => ({date, menu:{date,dishes:[...dishes],locked:false,pos
     assert.match(await page.locator('#dishChips').textContent(),/Đậu hũ hấp nấm/,'Arbitrary daily names work without category or image records');
     assert.equal(await page.locator('#dishChips img').count(),0);
     await page.locator('#tabMenuBtn').click(); await page.locator('#toggleEditMenuTabBtn').click();
+    await page.locator('#menuText').fill(''); await page.locator('#prevMenuBtn').click(); await page.waitForFunction(() => document.querySelector('#menuText').value.includes('Sườn heo'), null, {timeout:3000}); // previous day's menu copied, not saved yet
+    assert.equal(await page.locator('#menuEditor').isVisible(),true);
     await page.locator('#sampleMenuBtn').click(); await page.locator('#saveMenuBtn').click(); await page.locator('#menuEditor').waitFor({state:'hidden'});
     await page.locator('#shareBtn').click(); assert.equal(await page.locator('#shareModal').isVisible(),true);
     await page.keyboard.press('Escape'); assert.equal(await page.locator('#shareModal').isVisible(),false);
