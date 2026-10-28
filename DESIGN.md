@@ -24,7 +24,7 @@ The hero photograph is decorative and stays the same when the daily menu changes
 - Icons: official Phosphor regular glyphs, subset to the icons used by this app.
 - Light: canvas `#fafafa`, surface `#fefefe`, text `#222426`.
 - Dark: canvas `#17191b`, surface `#1e2023`, text `#f0f1f2`.
-- Accent: existing indigo `#2b5282`, lightened to `#a0bce1` in dark mode.
+- Brand and accent: cucumber green `#2f6b3b` (buttons, selection, icon tile; white text 6.1:1), lightened to cucumber flesh `#9ccb86` in dark mode. Selected surfaces use `#eaf3e5`.
 - Shapes: 20px hero, 16px panels, 12px dish choices, 10px inputs, pill buttons.
 - Layers: form content 1, toast 10, dialog 20, skip link 30.
 - Below 768px: explicit single-column form in its original field order.

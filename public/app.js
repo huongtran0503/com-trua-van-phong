@@ -51,8 +51,8 @@
   const displayName = (o) => (o.forUser && people.get(o.forUser) && people.get(o.forUser).name) || o.name;
   const isPoster = () => !!(menu && myId && menu.postedBy === myId);
 
-  // Indigo Blue, Slate & Nori Black Palette for Colleague Avatars
-  const AVATAR_COLORS = ["#2b5282"];
+  // Cucumber green avatars, matching --brand
+  const AVATAR_COLORS = ["#2f6b3b"];
   function getAvatarColor(name) {
     let hash = 0;
     for (let i = 0; i < (name || "").length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
