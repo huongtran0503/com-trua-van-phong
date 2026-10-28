@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "test:ui": "node tests/ui-smoke.cjs",
+    "audit:ui": "node tests/lighthouse.cjs"
   },
   "repository": {
     "type": "git",

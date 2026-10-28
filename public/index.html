@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="vi">
 <head>
   <meta charset="utf-8">
@@ -6,6 +6,7 @@
   <title>Cơm Trưa Văn Phòng</title>
   <meta name="description" content="Đặt cơm trưa văn phòng đơn giản, hiện đại và đồng bộ tức thì.">
   <meta name="theme-color" content="#fafafa">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <script>
     try {
       const theme = localStorage.getItem('com-trua-theme');
@@ -13,7 +14,8 @@
     } catch {}
   </script>
   <link rel="preload" href="/assets/fonts/plus-jakarta-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/assets/lunch-hero.webp" as="image">
+  <link rel="preload" href="/assets/lunch-hero.webp" as="image" imagesrcset="/assets/lunch-hero-small.webp 768w, /assets/lunch-hero.webp 1100w" imagesizes="(max-width: 420px) calc(100vw - 32px), (max-width: 767px) 50vw, 640px" fetchpriority="high">
+  <link rel="stylesheet" href="/assets/fonts/fonts.css">
   <link rel="stylesheet" href="/assets/icons/style.css">
   <link rel="stylesheet" href="/style.css">
   <link rel="manifest" href="/manifest.json">
@@ -56,10 +58,10 @@
         <div class="hero-copy">
           <span class="hero-eyebrow">BỮA TRƯA VĂN PHÒNG</span>
           <h1 id="formTitle">Hôm nay bạn<br>muốn ăn gì?</h1>
-          <p>Chọn món yêu thích, thêm chút ghi chú.<br>Còn lại, cùng chờ đến giờ cơm.</p>
+          <p>Chọn món yêu thích, thêm ghi chú.<br> Đặt bữa trưa cùng đồng nghiệp.</p>
           <button type="button" class="hero-link" id="viewFullMenuBtn">Xem thực đơn <i class="ph ph-arrow-up-right" aria-hidden="true"></i></button>
         </div>
-        <div class="hero-photo"><img src="/assets/lunch-hero.webp" alt="Cơm sườn sốt chua ngọt, rau tươi và canh cho bữa trưa" width="900" height="600" fetchpriority="high"></div>
+        <div class="hero-photo"><img src="/assets/lunch-hero.webp" srcset="/assets/lunch-hero-small.webp 768w, /assets/lunch-hero.webp 1100w" sizes="(max-width: 420px) calc(100vw - 32px), (max-width: 767px) 50vw, 640px" alt="Bữa trưa minh họa với cơm sườn, rau tươi và canh" width="1100" height="520" fetchpriority="high"></div>
       </section>
       <div id="lockNotice" class="warning-banner" hidden><span><i class="ph ph-lock-simple" aria-hidden="true"></i> Đơn ngày này đã chốt sổ.</span><button type="button" class="btn-sm btn-subtle" id="unlockBtn">Mở lại nhận đơn</button></div>
       <div id="orderPanel">
@@ -73,10 +75,8 @@
           </section>
           <section class="dishes-section" aria-labelledby="dishHeading">
             <div class="menu-section-heading"><div><h2 id="dishHeading">Thực đơn hôm nay</h2><p id="posterLine">Chọn một hoặc nhiều món cho bữa trưa.</p></div><span class="menu-count-label" id="dishTotalLabel"></span></div>
-            <div class="dish-filters" role="group" aria-label="Lọc món ăn"><button type="button" class="filter-btn active" data-filter="all" aria-pressed="true">Tất cả</button><button type="button" class="filter-btn" data-filter="main" aria-pressed="false">Món chính</button><button type="button" class="filter-btn" data-filter="side" aria-pressed="false">Rau &amp; canh</button></div>
             <div class="dishes-choice-grid" id="dishChips" aria-busy="true"><div class="dish-skeleton"></div><div class="dish-skeleton"></div><div class="dish-skeleton"></div><div class="dish-skeleton"></div></div>
             <p class="field-error" id="dishError" role="status" hidden></p>
-            <p class="image-note">Ảnh món ăn mang tính minh họa.</p>
           </section>
           <section class="section-block rice-section" aria-labelledby="riceLabel"><div class="section-header"><span class="section-label" id="riceLabel">Lượng cơm</span></div><div class="seg-controller" id="riceSeg" role="radiogroup" aria-labelledby="riceLabel"><label class="seg-item"><input type="radio" name="rice" value="" id="rice-normal" checked><span>Bình thường</span></label><label class="seg-item"><input type="radio" name="rice" value="it" id="rice-it"><span>Ít cơm</span></label><label class="seg-item"><input type="radio" name="rice" value="nhieu" id="rice-nhieu"><span>Nhiều cơm</span></label><label class="seg-item"><input type="radio" name="rice" value="khong" id="rice-khong"><span>Không cơm</span></label></div></section>
           <section class="section-block note-section"><div class="section-header"><label class="section-label" for="noteInput">Ghi chú thêm</label><span class="optional-label">Tùy chọn</span></div><input type="text" id="noteInput" class="clean-input" placeholder="Ví dụ: ít cay, canh riêng..." maxlength="120"><div class="quick-pill-tags" id="quickTagList"><button type="button" class="tag-pill" data-tag="Không hành" aria-pressed="false">Không hành</button><button type="button" class="tag-pill" data-tag="Ít cay" aria-pressed="false">Ít cay</button><button type="button" class="tag-pill" data-tag="Nhiều sốt" aria-pressed="false">Nhiều sốt</button><button type="button" class="tag-pill" data-tag="Canh riêng" aria-pressed="false">Canh riêng</button><button type="button" class="tag-pill" data-tag="Ăn sớm" aria-pressed="false">Ăn sớm</button></div></section>
@@ -88,7 +88,7 @@
     <div class="view-panel" id="viewMenu" role="tabpanel" aria-labelledby="tabMenuBtn" hidden>
       <div class="menu-hero-banner"><div><h1 class="view-title">Thực đơn</h1><h2 class="menu-hero-date" id="menuCoverDate"></h2><div class="menu-hero-meta"><span id="menuCoverPoster"></span><span id="menuCoverDishCount"></span><span id="menuCoverStatus" class="status-pill-green">Đang nhận đơn</span></div></div><div class="menu-hero-actions"><button type="button" class="btn-solid" id="goToOrderTabBtn">Đặt cơm <i class="ph ph-arrow-right" aria-hidden="true"></i></button><button type="button" class="btn-subtle" id="toggleEditMenuTabBtn"><i class="ph ph-pencil-simple" aria-hidden="true"></i> Sửa thực đơn</button><button type="button" class="btn-subtle" id="quickSampleMenuTabBtn">+ Mẫu</button></div></div>
       <div class="clean-card menu-editor-card" id="menuEditor" hidden><div class="editor-header"><h3 class="editor-title">Chỉnh sửa thực đơn ngày <span id="menuDateLabel"></span></h3><button type="button" class="circle-btn-sm" id="closeMenuEditorBtn" aria-label="Đóng chỉnh sửa thực đơn"><i class="ph ph-x" aria-hidden="true"></i></button></div><label class="input-label" for="menuText">Danh sách món ăn</label><textarea id="menuText" class="clean-textarea" rows="6" placeholder="Mỗi món một dòng" aria-describedby="menuHelp menuError"></textarea><p id="menuHelp" class="helper-text">Nhập mỗi món ăn trên một dòng.</p><p class="field-error" id="menuError" role="alert" hidden></p><div class="editor-footer"><button type="button" class="text-link-btn" id="sampleMenuBtn">+ Điền thực đơn mẫu</button><div class="button-row"><button type="button" class="btn-subtle" id="cancelMenuBtn">Hủy</button><button type="button" class="btn-solid" id="saveMenuBtn">Lưu thực đơn</button></div></div></div>
-      <div class="dishes-showcase-grid" id="menuDishesGrid"></div><p class="image-note">Ảnh món ăn mang tính minh họa.</p>
+      <div class="menu-dishes-list" id="menuDishesGrid"></div>
     </div>
     <div class="view-panel" id="viewOrdersList" role="tabpanel" aria-labelledby="tabOrdersListBtn" hidden>
       <div class="orders-layout-grid"><section class="orders-main-col"><div class="col-header-bar"><h1 class="view-title">Danh sách đơn đã đặt</h1><label class="search-field"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="search" id="orderSearchInput" class="search-input-pill" placeholder="Tìm theo tên hoặc món..." aria-label="Tìm đơn theo tên hoặc món ăn"></label></div><div class="orders-list-wrap"><ol class="orders-clean-list" id="orderList"></ol><div class="empty-state-clean" id="orderEmpty"><i class="ph ph-receipt" aria-hidden="true"></i><h2 id="orderEmptyTitle">Chưa có ai đặt cơm</h2><p id="orderEmptyText">Đơn đặt của mọi người sẽ xuất hiện ở đây.</p></div></div></section><aside class="orders-side-col" aria-label="Tổng hợp đơn đặt"><section class="clean-card"><div class="card-header-clean"><h2 class="card-title-sm">Tổng hợp món gửi quán</h2><button type="button" class="btn-sm btn-subtle" id="copyTallyBtn"><i class="ph ph-copy" aria-hidden="true"></i> Copy</button></div><div id="tallyContainer"><div id="tallyCards" class="tally-chips-wrap"></div></div></section><section class="clean-card"><div class="card-header-clean"><label class="card-title-sm" for="msgBox">Tin nhắn gửi nhóm chat</label></div><textarea id="msgBox" class="clean-textarea" readonly rows="7"></textarea><button type="button" class="btn-solid-sm" id="copyMsgBtn"><i class="ph ph-copy" aria-hidden="true"></i> Copy tin nhắn</button><div class="lock-bar"><span id="lockHint" class="lock-hint-text"></span><button type="button" id="lockBtn" class="btn-sm btn-subtle">Chốt đơn</button></div></section></aside></div>

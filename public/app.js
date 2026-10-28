@@ -24,6 +24,7 @@
   let searchQuery = "";
   let ws = null;
   let wsConnected = false;
+  let loadFailed = false;
 
   // ---------- Helpers ----------
   function todayVN() {
@@ -45,15 +46,7 @@
   const isPoster = () => !!(menu && myId && menu.postedBy === myId);
 
   // Indigo Blue, Slate & Nori Black Palette for Colleague Avatars
-  const AVATAR_COLORS = [
-    "#2B5282", // Deep Indigo Blue
-    "#14171A", // Matte Nori Black
-    "#3A6094", // Cobalt Blue
-    "#4A6FA5", // Periwinkle Slate Blue
-    "#203E66", // Midnight Indigo
-    "#597BB2", // Swirl Accent Blue
-    "#344E72"  // Muted Indigo
-  ];
+  const AVATAR_COLORS = ["#2b5282"];
   function getAvatarColor(name) {
     let hash = 0;
     for (let i = 0; i < (name || "").length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -66,17 +59,25 @@
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
-  function getFoodEmoji(name) {
-    const n = (name || "").toLowerCase();
-    if (n.includes("sườn") || n.includes("heo") || n.includes("thịt")) return "🍖";
-    if (n.includes("bò")) return "🥩";
-    if (n.includes("gà")) return "🍗";
-    if (n.includes("cá") || n.includes("tôm") || n.includes("hải sản") || n.includes("basa")) return "🐟";
-    if (n.includes("canh") || n.includes("súp")) return "🍲";
-    if (n.includes("rau") || n.includes("cải") || n.includes("muống") || n.includes("xào")) return "🥗";
-    if (n.includes("trứng")) return "🍳";
-    if (n.includes("đậu") || n.includes("tofu")) return "🥢";
-    return "🍱";
+
+
+  function icon(name) {
+    const el = document.createElement("i");
+    el.className = "ph ph-" + name;
+    el.setAttribute("aria-hidden", "true");
+    return el;
+  }
+
+
+  function fieldError(id, message, inputId) {
+    $(id).textContent = message; $(id).hidden = !message;
+    if (inputId) $(inputId).setAttribute("aria-invalid", message ? "true" : "false");
+  }
+  function ownOrder() {
+    return orders.find(o => o.forUser === myId || (!o.forUser && o.createdBy === myId && o.name === myName()));
+  }
+  function scrollToForm() {
+    $("orderPanel").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start" });
   }
 
   function orderLine(o) {
@@ -173,7 +174,7 @@
     if (mode === "ws") {
       badge.classList.remove("offline");
       badge.classList.remove("cloud-sync");
-      text.textContent = "Realtime";
+      text.textContent = "Đã đồng bộ";
       badge.title = "Đang kết nối Realtime WebSocket máy chủ";
     } else if (mode === "cloud") {
       badge.classList.remove("offline");
@@ -197,6 +198,7 @@
       if (msg.date === date && msg.data) {
         menu = msg.data;
         menuLoaded = true;
+        selected = selected.filter(d => (menu?.dishes || []).includes(d));
         render();
       }
     } else if (msg.type === "ORDER_UPDATED" || msg.type === "ORDER_DELETED") {
@@ -214,28 +216,34 @@
   async function fetchDateState(d, silent = false) {
     try {
       const res = await fetch(`/api/state?date=${d}&_t=${Date.now()}`);
-      if (res.ok) {
-        const data = await res.json();
-        applyState(data);
-        if (!wsConnected) {
-          updateWsStatus("cloud");
-          startSmartPolling();
-        }
-      } else {
-        if (!wsConnected) updateWsStatus("offline");
-      }
-    } catch (err) {
-      if (!silent) {
-        console.warn("Không kết nối được server, dùng fallback local:", err);
-      }
+      if (!res.ok) throw new Error("Không tải được dữ liệu");
+      const data = await res.json();
+      if (d !== date) return;
+      loadFailed = false; applyState(data);
+      try {
+        const store = JSON.parse(localStorage.getItem("com_trua_db_v1") || "{}");
+        store.menus = { ...store.menus, [d]: data.menu };
+        store.orders = { ...store.orders };
+        Object.keys(store.orders).forEach(k => { if (store.orders[k].date === d) delete store.orders[k]; });
+        (data.orders || []).forEach(o => { store.orders[o.id] = o; });
+        store.people = data.people || {};
+        localStorage.setItem("com_trua_db_v1", JSON.stringify(store));
+      } catch {}
+      if (!wsConnected) { updateWsStatus("cloud"); startSmartPolling(); }
+    } catch {
+      if (d !== date) return;
+      loadFailed = true;
       if (!wsConnected) updateWsStatus("offline");
-      fallbackLocalLoad(d);
+      if (silent && menuLoaded) render(); else fallbackLocalLoad(d);
+      startSmartPolling();
     }
   }
 
   function applyState(data) {
     menu = data.menu;
     menuLoaded = true;
+    loadFailed = false;
+    selected = selected.filter(d => (menu?.dishes || []).includes(d));
     orders = data.orders || [];
     if (data.people) {
       people = new Map(Object.entries(data.people));
@@ -271,6 +279,7 @@
       if (item.btn) {
         item.btn.classList.toggle("active", isAct);
         item.btn.setAttribute("aria-selected", isAct ? "true" : "false");
+        item.btn.tabIndex = isAct ? 0 : -1;
       }
       if (item.view) {
         item.view.hidden = !isAct;
@@ -299,17 +308,25 @@
   function render() {
     $("dateInput").value = date;
     const isToday = date === todayVN();
-    $("todayBtn").style.opacity = isToday ? "0.6" : "1";
+    $("todayBtn").setAttribute("aria-pressed", String(isToday));
+    $("pageDateLabel").textContent = prettyDate(date);
+    const notice = $("globalNotice"); notice.hidden = !loadFailed;
+    if (loadFailed && !notice.childElementCount) {
+      const text = document.createElement("span"); text.textContent = "Chưa thể kết nối. Dữ liệu đã lưu có thể chưa phải mới nhất.";
+      const retry = document.createElement("button"); retry.type = "button"; retry.className = "btn-sm btn-subtle"; retry.textContent = "Thử lại";
+      retry.addEventListener("click", () => fetchDateState(date)); notice.append(text, retry);
+    }
+    for (const id of ["dateInput", "prevDay", "nextDay", "todayBtn"]) $(id).disabled = busy;
 
     const locked = !!(menu && menu.locked);
     const hasMenu = !!(menu && menu.dishes && menu.dishes.length);
 
     // Update Tab Badges
     const menuBadge = $("menuCountBadge");
-    if (menuBadge) menuBadge.textContent = `${menu?.dishes?.length || 0} món`;
+    if (menuBadge) menuBadge.textContent = String(menu?.dishes?.length || 0);
 
     const ordersBadge = $("ordersCountBadge");
-    if (ordersBadge) ordersBadge.textContent = `${orders.length} suất`;
+    if (ordersBadge) ordersBadge.textContent = String(orders.length);
 
     // Status Pill
     const pill = $("statusPill");
@@ -334,6 +351,7 @@
       $("menuDateLabel").textContent = prettyDate(date);
     }
 
+    $("dishTotalLabel").textContent = `${menu?.dishes?.length || 0} món`;
     renderOrderForm();
     renderMyOrderSummary();
     renderMenuTab();
@@ -342,134 +360,58 @@
   }
 
   function renderMyOrderSummary() {
-    const myOrder = orders.find(o => o.createdBy === myId || (o.forUser && o.forUser === myId));
-    const noHint = $("noMyOrderHint");
-    const hasBox = $("hasMyOrderBox");
-    const ticket = $("myOrderTicket");
-
-    if (myOrder) {
-      if (noHint) noHint.hidden = true;
-      if (hasBox) hasBox.hidden = false;
-      if (ticket) {
-        ticket.innerHTML = `
-          <div style="font-weight:700;color:var(--primary);margin-bottom:2px">${displayName(myOrder)}</div>
-          <div>${orderLine(myOrder)}</div>
-          <div style="font-size:0.75rem;color:var(--muted);margin-top:4px">
-            🕒 Đặt lúc ${new Date(myOrder.createdAt || Date.now()).toLocaleTimeString("vi-VN", {hour:"2-digit", minute:"2-digit"})}
-          </div>
-        `;
-      }
-    } else {
-      if (noHint) noHint.hidden = false;
-      if (hasBox) hasBox.hidden = true;
-    }
+    const order = ownOrder();
+    $("noMyOrderHint").hidden = !!order; $("hasMyOrderBox").hidden = !order;
+    const ticket = $("myOrderTicket"); ticket.replaceChildren();
+    if (!order) return;
+    const name = document.createElement("strong"); name.textContent = displayName(order);
+    const detail = document.createElement("p"); detail.textContent = orderLine(order);
+    const time = document.createElement("p"); time.className = "helper-text";
+    if (order.createdAt) time.textContent = "Đặt lúc " + new Date(order.createdAt).toLocaleTimeString("vi-VN", { timeZone: TZ, hour: "2-digit", minute: "2-digit" });
+    ticket.append(name, detail, time);
+    $("editMyOrderBtn").disabled = !!menu?.locked || busy;
+    $("deleteMyOrderBtn").disabled = !!menu?.locked || busy;
   }
 
   function renderMenuTab() {
-    const locked = !!(menu && menu.locked);
-    const dishes = (menu && menu.dishes) || [];
-
-    // Header info
+    const locked = !!menu?.locked, dishes = menu?.dishes || [];
     $("menuCoverDate").textContent = prettyDate(date);
-    const poster = menu && menu.postedBy ? (people.get(menu.postedBy) ? people.get(menu.postedBy).name : "Đồng nghiệp") : "Đồng nghiệp";
-    $("menuCoverPoster").textContent = poster;
-    $("menuCoverDishCount").textContent = `${dishes.length} món`;
-
-    const st = $("menuCoverStatus");
-    if (st) {
-      if (locked) {
-        st.textContent = "Đã chốt nhận đơn";
-        st.className = "status-pill-green locked";
-      } else {
-        st.textContent = "Đang nhận đơn";
-        st.className = "status-pill-green";
-      }
-    }
-
-    // Popularity counts
-    const dishCounts = {};
-    orders.forEach(o => {
-      (o.dishes || []).forEach(d => {
-        dishCounts[d] = (dishCounts[d] || 0) + 1;
+    $("menuCoverPoster").textContent = people.get(menu?.postedBy)?.name ? "Đăng bởi " + people.get(menu.postedBy).name : "Thực đơn văn phòng";
+    $("menuCoverDishCount").textContent = dishes.length + " món";
+    $("menuCoverStatus").textContent = !dishes.length ? "Chưa có thực đơn" : locked ? "Đã chốt nhận đơn" : "Đang nhận đơn";
+    $("menuCoverStatus").className = "status-pill-green" + (locked ? " locked" : "");
+    const grid = $("menuDishesGrid"); grid.replaceChildren();
+    if (!dishes.length) { grid.append(emptyState("Chưa có thực đơn cho ngày này", "Bấm Sửa thực đơn để thêm danh sách món ăn.", "book-open")); return; }
+    dishes.forEach(dish => {
+      const card = document.createElement("article"); card.className = "menu-dish-row";
+      const copy = document.createElement("div");
+      const name = document.createElement("h2"); name.className = "menu-dish-name"; name.textContent = dish;
+      copy.append(name);
+      const count = orders.filter(o => o.dishes?.includes(dish)).length;
+      if (count) { const caption = document.createElement("p"); caption.className = "menu-dish-count"; caption.textContent = count + " suất đã đặt"; copy.append(caption); }
+      const action = document.createElement("button"); action.type = "button";
+      action.className = "menu-dish-action" + (selected.includes(dish) ? " active" : ""); action.disabled = locked || busy;
+      action.append(icon(selected.includes(dish) ? "check" : "plus"), document.createTextNode(selected.includes(dish) ? "Đã chọn" : "Chọn món"));
+      action.setAttribute("aria-label", "Chọn " + dish);
+      action.addEventListener("click", () => {
+        if (!selected.includes(dish)) selected.push(dish);
+        switchTab("order"); renderDishChips(locked); renderPreview(); scrollToForm();
       });
+      card.append(copy, action); grid.append(card);
     });
+  }
 
-    // Render Grid
-    const grid = $("menuDishesGrid");
-    if (!grid) return;
-    grid.replaceChildren();
-
-    if (!dishes.length) {
-      const empty = document.createElement("div");
-      empty.style.gridColumn = "1 / -1";
-      empty.className = "empty-state-clean";
-      empty.innerHTML = `
-        <div class="empty-emoji">📋</div>
-        <h4>Chưa có thực đơn cho ngày này</h4>
-        <p>Bấm "Sửa thực đơn" để thêm danh sách món ăn hôm nay.</p>
-      `;
-      grid.appendChild(empty);
-      return;
-    }
-
-    dishes.forEach((dish, idx) => {
-      const count = dishCounts[dish] || 0;
-      const isChosen = selected.includes(dish);
-
-      const card = document.createElement("div");
-      card.className = "food-card";
-
-      const top = document.createElement("div");
-      top.className = "food-card-top";
-
-      const icon = document.createElement("div");
-      icon.className = "food-card-icon";
-      icon.textContent = getFoodEmoji(dish);
-
-      const badge = document.createElement("span");
-      badge.className = "food-card-badge" + (count > 0 ? " popular" : "");
-      badge.textContent = count > 0 ? `🔥 ${count} người chọn` : "Món ngon";
-
-      top.append(icon, badge);
-
-      const nameEl = document.createElement("div");
-      nameEl.className = "food-card-name";
-      nameEl.textContent = dish;
-
-      const bottom = document.createElement("div");
-      bottom.className = "food-card-bottom";
-
-      const subText = document.createElement("span");
-      subText.style.fontSize = "0.82rem";
-      subText.style.color = "var(--text-muted)";
-      subText.textContent = `Món #${idx + 1}`;
-
-      const actionBtn = document.createElement("button");
-      actionBtn.type = "button";
-      actionBtn.className = "food-card-action-btn" + (isChosen ? " active" : "");
-      actionBtn.textContent = isChosen ? "✓ Đã chọn" : "+ Chọn món";
-
-      bottom.append(subText, actionBtn);
-      card.append(top, nameEl, bottom);
-
-      card.addEventListener("click", () => {
-        if (!selected.includes(dish)) {
-          selected.push(dish);
-        }
-        switchTab("order");
-        renderDishChips(locked);
-        renderPreview();
-        toast(`Đã chọn: ${dish}`);
-      });
-
-      grid.appendChild(card);
-    });
+  function emptyState(title, description, glyph) {
+    const box = document.createElement("div"); box.className = "empty-state-clean";
+    const heading = document.createElement("h3"); heading.textContent = title;
+    const text = document.createElement("p"); text.textContent = description;
+    box.append(icon(glyph), heading, text); return box;
   }
 
   function renderOrderForm() {
     const locked = !!(menu && menu.locked);
     const poster = menu && menu.postedBy ? (people.get(menu.postedBy) ? people.get(menu.postedBy).name : "Đồng nghiệp") : null;
-    $("posterLine").textContent = poster ? `Thực đơn bởi ${poster}` : "";
+    $("posterLine").textContent = poster ? `Thực đơn bởi ${poster}` : "Chọn một hoặc nhiều món cho bữa trưa.";
 
     // Lock Notice
     const lockNotice = $("lockNotice");
@@ -483,6 +425,7 @@
     const hasName = !!curName && !editingName;
     $("meEdit").hidden = hasName;
     $("meView").hidden = !hasName;
+    $("cancelNameBtn").hidden = !editingName;
     if (hasName) {
       $("meName").textContent = curName;
       $("meAvatar").textContent = getInitials(curName);
@@ -507,81 +450,65 @@
     renderPreview();
 
     // Disable inputs if locked
-    $("submitBtn").disabled = locked;
+    $("submitBtn").disabled = locked || busy || !menuLoaded || !menu?.dishes?.length || loadFailed;
     document.querySelectorAll("#orderForm input, #orderForm textarea, #orderForm button:not(#unlockBtn)")
       .forEach(el => {
         if (el.id !== "unlockBtn") {
-          el.disabled = locked;
+          el.disabled = locked || busy;
+          if (el.id === "submitBtn") el.disabled = locked || busy || !menuLoaded || !menu?.dishes?.length || loadFailed;
         }
       });
   }
 
   function renderDishChips(locked) {
     const wrap = $("dishChips");
-    wrap.replaceChildren();
-
-    const dishes = (menu && menu.dishes) || [];
-    dishes.forEach((d) => {
-      const isChosen = selected.includes(d);
-      const card = document.createElement("div");
-      card.className = "dish-choice-card" + (isChosen ? " selected" : "");
-
-      const left = document.createElement("div");
-      left.className = "dish-choice-left";
-
-      const icon = document.createElement("span");
-      icon.className = "dish-choice-icon";
-      icon.textContent = getFoodEmoji(d);
-
-      const title = document.createElement("span");
-      title.className = "dish-choice-title";
-      title.textContent = d;
-
-      left.append(icon, title);
-
-      const check = document.createElement("div");
-      check.className = "dish-choice-check";
-      check.textContent = isChosen ? "✓" : "";
-
-      card.append(left, check);
-
-      if (!locked) {
-        card.addEventListener("click", () => {
-          if (selected.includes(d)) {
-            selected = selected.filter(x => x !== d);
-          } else {
-            selected.push(d);
-          }
-          renderDishChips(locked);
-          renderPreview();
-        });
-      }
-
-      wrap.appendChild(card);
+    const focused = wrap.contains(document.activeElement) ? document.activeElement.dataset.dish : null;
+    wrap.replaceChildren(); wrap.setAttribute("aria-busy", String(!menuLoaded));
+    if (!menuLoaded) {
+      for (let i = 0; i < 6; i++) { const skeleton = document.createElement("div"); skeleton.className = "dish-skeleton"; wrap.append(skeleton); }
+      return;
+    }
+    const dishes = menu?.dishes || [];
+    if (!dishes.length) { wrap.append(emptyState("Chưa có thực đơn", "Vào Thực đơn để thêm món cho ngày này.", "bowl-food")); return; }
+    dishes.forEach(dish => {
+      const chosen = selected.includes(dish);
+      const card = document.createElement("button"); card.type = "button";
+      card.className = "dish-choice-card" + (chosen ? " selected" : ""); card.dataset.dish = dish;
+      card.disabled = locked || busy; card.setAttribute("aria-pressed", String(chosen)); card.setAttribute("aria-label", dish);
+      const name = document.createElement("span"); name.className = "dish-choice-title"; name.textContent = dish;
+      const check = document.createElement("span"); check.className = "dish-choice-check"; check.append(icon(chosen ? "check" : "plus"));
+      card.append(name, check);
+      card.addEventListener("click", () => {
+        selected = selected.includes(dish) ? selected.filter(d => d !== dish) : [...selected, dish];
+        fieldError("dishError", ""); fieldError("submitError", ""); renderDishChips(locked); renderPreview();
+      });
+      wrap.append(card); if (focused === dish) card.focus({ preventScroll: true });
     });
   }
 
   function renderPreview() {
-    const count = selected.length;
-    $("pickCount").textContent = count ? `· Đã chọn ${count} món` : "Chọn ít nhất 1 món";
-    const subBtn = $("submitBtn");
-    if (editingId) {
-      subBtn.textContent = count ? `Cập nhật đơn (${count} món) ➜` : "Cập nhật đơn ➜";
-    } else {
-      subBtn.textContent = count ? `Đặt cơm ngay (${count} món) ➜` : "Đặt cơm ngay ➜";
-    }
+    $("pickCount").textContent = selected.length ? selected.length + " món đã chọn" : "Chưa chọn món";
+    $("selectedDishNames").textContent = selected.length ? selected.join(", ") : "Món bạn chọn sẽ xuất hiện ở đây.";
+    const btn = $("submitBtn");
+    btn.replaceChildren(document.createTextNode(busy ? "Đang gửi đơn..." : menu?.locked ? "Đã chốt đơn" : editingId ? "Cập nhật đơn" : "Đặt cơm ngay"), icon(busy ? "bowl-food" : "arrow-right"));
+    btn.setAttribute("aria-busy", String(busy));
+    const tags = $("noteInput").value.split(",").map(s => s.trim());
+    document.querySelectorAll("[data-tag]").forEach(btn => btn.setAttribute("aria-pressed", String(tags.includes(btn.dataset.tag))));
   }
 
   function renderList() {
     const list = $("orderList");
     const totalCount = orders.length;
     $("countLabel").textContent = `${totalCount} suất`;
-    $("orderEmpty").hidden = totalCount > 0;
+
 
     const filtered = searchQuery
       ? orders.filter(o => displayName(o).toLowerCase().includes(searchQuery.toLowerCase()) || orderLine(o).toLowerCase().includes(searchQuery.toLowerCase()))
       : orders;
 
+    $("orderEmpty").hidden = filtered.length > 0;
+    $("orderEmptyTitle").textContent = searchQuery ? "Không tìm thấy đơn" : "Chưa có ai đặt cơm";
+    $("orderEmptyText").textContent = searchQuery ? "Thử tìm bằng tên hoặc món ăn khác." : "Đơn đặt của mọi người sẽ xuất hiện ở đây.";
     const locked = !!(menu && menu.locked);
     list.replaceChildren(...filtered.map((o) => {
       const li = document.createElement("li");
@@ -601,7 +528,8 @@
 
       const who = document.createElement("div");
       who.className = "order-user-name";
-      who.textContent = name + (o.forUser && o.createdBy && o.createdBy !== name ? ` (bởi ${o.createdBy})` : "");
+      const creator = people.get(o.createdBy)?.name;
+      who.textContent = name + (creator && o.createdBy !== o.forUser && creator !== name ? ` (bởi ${creator})` : "");
 
       const what = document.createElement("div");
       what.className = "order-dishes-text";
@@ -620,7 +548,7 @@
         edit.type = "button";
         edit.className = "btn-sm btn-subtle";
         edit.textContent = "Sửa";
-        edit.addEventListener("click", () => startEdit(o));
+        edit.addEventListener("click", () => { switchTab("order"); startEdit(o); });
 
         const del = document.createElement("button");
         del.type = "button";
@@ -671,21 +599,14 @@
       }
     });
 
-    Object.entries(dishTally).forEach(([name, count]) => {
-      const chip = document.createElement("div");
-      chip.className = "tally-chip";
-      chip.innerHTML = `<span>${getFoodEmoji(name)} ${name}</span>: <strong>${count}</strong>`;
-      container.appendChild(chip);
-    });
-
-    Object.entries(riceTally).forEach(([rName, count]) => {
-      const chip = document.createElement("div");
-      chip.className = "tally-chip";
-      chip.style.background = "var(--surface)";
-      chip.style.border = "1px solid var(--border)";
-      chip.innerHTML = `<span>🍚 ${rName}</span>: <strong>${count}</strong>`;
-      container.appendChild(chip);
-    });
+    const add = (name, count) => {
+      const row = document.createElement("div"); row.className = "tally-chip";
+      const label = document.createElement("span"); label.textContent = name;
+      const number = document.createElement("strong"); number.textContent = count + " suất";
+      row.append(label, number); container.append(row);
+    };
+    Object.entries(dishTally).forEach(([name, count]) => add(name, count));
+    Object.entries(riceTally).forEach(([name, count]) => add(name, count));
   }
 
   function messageText() {
@@ -703,6 +624,8 @@
     // Update lock button state
     const locked = !!(menu && menu.locked);
     $("lockBtn").textContent = locked ? "Mở nhận đơn" : "Chốt đơn";
+    $("lockBtn").disabled = !canLock();
+    $("copyTallyBtn").disabled = !orders.length;
     $("lockHint").textContent = locked ? "Đang khóa không nhận đơn mới" : "Bấm để chốt danh sách khi hết giờ";
   }
 
@@ -726,7 +649,8 @@
     $("submitBtn").textContent = "Cập nhật đơn";
     $("cancelEditBtn").hidden = false;
     render();
-    $("orderPanel").scrollIntoView({ behavior: "smooth" });
+    switchTab("order");
+    scrollToForm();
   }
 
   function resetForm() {
@@ -735,7 +659,8 @@
     $("noteInput").value = "";
     const normRadio = $("rice-normal");
     if (normRadio) normRadio.checked = true;
-    $("dupNotice").hidden = true;
+    fieldError("submitError", "");
+    fieldError("dishError", "");
     $("submitBtn").textContent = "Đặt cơm ngay";
     $("cancelEditBtn").hidden = true;
     $("forOther").checked = false;
@@ -743,63 +668,43 @@
     renderPreview();
   }
 
-  $("cancelEditBtn").addEventListener("click", resetForm);
+  $("cancelEditBtn").addEventListener("click", () => { resetForm(); render(); });
 
   async function submitOrder() {
+    if (busy || menu?.locked || !menu?.dishes?.length || loadFailed) return;
+    fieldError("submitError", "");
     const name = targetName();
     if (!name) {
-      toast("Vui lòng nhập tên người đặt");
-      $("nameInput").focus();
+      if ($("forOther").checked) { fieldError("submitError", "Vui lòng nhập tên đồng nghiệp."); $("otherName").focus(); }
+      else { fieldError("nameError", "Nhập tên và bấm Lưu trước khi đặt cơm.", "nameInput"); $("nameInput").focus(); }
       return;
     }
-    if (!selected.length) {
-      toast("Vui lòng chọn ít nhất một món ăn");
-      return;
-    }
-
-    const riceInput = document.querySelector('#riceSeg input:checked');
-    const rice = riceInput ? riceInput.value : "";
-    const note = $("noteInput").value.trim();
-    const forOther = $("forOther").checked;
-
-    const payload = {
-      id: editingId || undefined,
-      date,
-      name,
-      dishes: selected,
-      rice,
-      note,
-      forUser: forOther ? undefined : myId,
-      createdBy: myName() || name
-    };
-
+    if (!selected.length) { fieldError("dishError", "Chọn ít nhất một món cho bữa trưa."); $("dishChips").querySelector("button")?.focus(); return; }
+    const requestDate = date, wasEditing = !!editingId;
+    const payload = { id: editingId || undefined, date, name, dishes: [...selected], rice: document.querySelector('#riceSeg input:checked')?.value || "", note: $("noteInput").value.trim(), forUser: $("forOther").checked ? undefined : myId, createdBy: myId };
+    busy = true; render();
     try {
-      const res = await fetch("/api/order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        toast(editingId ? "Đã cập nhật đơn thành công!" : `Đã đặt cơm cho ${name}!`);
-        resetForm();
-        fetchDateState(date);
-      } else {
-        const err = await res.json();
-        toast(err.error || "Không gửi được đơn");
-      }
-    } catch {
-      toast("Mất kết nối server, lưu tạm bộ nhớ local");
-    }
+      const res = await fetch("/api/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error || "Không gửi được đơn. Vui lòng thử lại."); }
+      toast(wasEditing ? "Đã cập nhật đơn." : "Đã đặt cơm cho " + name + "!");
+      if (requestDate === date) resetForm();
+      await fetchDateState(requestDate, true);
+    } catch (err) { fieldError("submitError", err instanceof TypeError ? "Chưa gửi được đơn. Kiểm tra kết nối rồi thử lại, món đã chọn vẫn được giữ." : err.message); }
+    finally { busy = false; render(); }
   }
 
   $("submitBtn").addEventListener("click", submitOrder);
 
   async function deleteOrder(o) {
+    if (menu?.locked || busy) return;
     try {
       const res = await fetch(`/api/order/${o.id}`, { method: "DELETE" });
       if (res.ok) {
         toast(`Đã xóa đơn của ${displayName(o)}`);
         fetchDateState(date);
+      } else {
+        const error = await res.json();
+        toast(error.error || "Không xóa được đơn. Vui lòng thử lại.");
       }
     } catch {
       toast("Không xóa được đơn");
@@ -809,9 +714,11 @@
   // Name management
   async function saveName() {
     const val = cleanName($("nameInput").value);
-    if (!val) { toast("Vui lòng nhập tên"); return; }
+    if (!val) { fieldError("nameError", "Vui lòng nhập tên của bạn.", "nameInput"); return; }
+    fieldError("nameError", "", "nameInput");
     localStorage.setItem("com_trua_user_name", val);
     editingName = false;
+    people.set(myId, { id: myId, name: val });
 
     try {
       await fetch("/api/people", {
@@ -819,7 +726,6 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: myId, name: val })
       });
-      people.set(myId, { id: myId, name: val });
     } catch {}
 
     toast(`Đã lưu tên: ${val}`);
@@ -845,11 +751,11 @@
   document.querySelectorAll('#riceSeg input').forEach(r => r.addEventListener("change", renderPreview));
 
   // Quick Tags
-  document.querySelectorAll(".quick-tag-btn").forEach((btn) => {
+  document.querySelectorAll("[data-tag]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const tag = btn.dataset.tag;
-      const cur = $("noteInput").value.trim();
-      $("noteInput").value = cur ? `${cur}, ${tag}` : tag;
+      const tags = $("noteInput").value.split(",").map(s => s.trim()).filter(Boolean);
+      $("noteInput").value = (tags.includes(tag) ? tags.filter(t => t !== tag) : [...tags, tag]).join(", ").slice(0, 120);
       renderPreview();
     });
   });
@@ -865,7 +771,10 @@
 
   $("saveMenuBtn").addEventListener("click", async () => {
     const lines = $("menuText").value.split("\n").map(s => s.trim()).filter(Boolean);
-    if (!lines.length) { toast("Thực đơn trống"); return; }
+    if (!lines.length) { fieldError("menuError", "Nhập ít nhất một món ăn."); return; }
+    fieldError("menuError", "");
+    $("saveMenuBtn").disabled = true;
+    $("saveMenuBtn").textContent = "Đang lưu...";
     try {
       const res = await fetch("/api/menu", {
         method: "POST",
@@ -875,11 +784,10 @@
       if (res.ok) {
         editingMenu = false;
         toast(`Đã lưu thực đơn với ${lines.length} món`);
-        fetchDateState(date);
-      }
-    } catch {
-      toast("Không lưu được thực đơn");
-    }
+        await fetchDateState(date);
+      } else { const err = await res.json(); throw new Error(err.error || "Không lưu được thực đơn."); }
+    } catch (err) { fieldError("menuError", err instanceof TypeError ? "Chưa lưu được. Kiểm tra kết nối rồi thử lại." : err.message); }
+    finally { $("saveMenuBtn").disabled = false; $("saveMenuBtn").textContent = "Lưu thực đơn"; }
   });
 
   $("sampleMenuBtn").addEventListener("click", () => {
@@ -895,6 +803,7 @@
 
   // Lock / Unlock
   async function toggleLock() {
+    if (!canLock() || busy) return;
     const currentLocked = !!(menu && menu.locked);
     const nextLocked = !currentLocked;
     try {
@@ -929,9 +838,12 @@
 
   // Date Navigation
   function gotoDate(d) {
-    if (d && d !== date) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d) && d !== date && !busy) {
       date = d;
+      menu = null; orders = []; menuLoaded = false; loadFailed = false;
+      editingMenu = false;
       resetForm();
+      render();
       fetchDateState(date);
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: "SUBSCRIBE_DATE", date }));
@@ -959,6 +871,8 @@
     const isDark = th === "dark";
     $("themeIconSun").hidden = !isDark;
     $("themeIconMoon").hidden = isDark;
+    $("themeToggleBtn").setAttribute("aria-label", isDark ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối");
+    document.querySelector('meta[name="theme-color"]').content = isDark ? "#17191b" : "#fafafa";
   }
   $("themeToggleBtn").addEventListener("click", () => {
     const cur = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
@@ -1043,7 +957,7 @@
   // My Order Summary buttons
   if ($("editMyOrderBtn")) {
     $("editMyOrderBtn").addEventListener("click", () => {
-      const myOrder = orders.find(o => o.createdBy === myId || (o.forUser && o.forUser === myId));
+      const myOrder = ownOrder();
       if (myOrder) {
         switchTab("order");
         startEdit(myOrder);
@@ -1051,14 +965,13 @@
     });
   }
 
-  if ($("deleteMyOrderBtn")) {
-    $("deleteMyOrderBtn").addEventListener("click", () => {
-      const myOrder = orders.find(o => o.createdBy === myId || (o.forUser && o.forUser === myId));
-      if (myOrder) {
-        deleteOrder(myOrder);
-      }
-    });
-  }
+  $("deleteMyOrderBtn").addEventListener("click", () => {
+    const order = ownOrder(), btn = $("deleteMyOrderBtn");
+    if (!order || menu?.locked) return;
+    if (btn.dataset.armed) { delete btn.dataset.armed; btn.textContent = "Hủy đơn"; deleteOrder(order); return; }
+    btn.dataset.armed = "true"; btn.textContent = "Xác nhận hủy?";
+    setTimeout(() => { delete btn.dataset.armed; btn.textContent = "Hủy đơn"; }, 3000);
+  });
 
   if ($("copyTallyBtn")) {
     $("copyTallyBtn").addEventListener("click", () => {
@@ -1072,7 +985,7 @@
           riceTally[rName] = (riceTally[rName] || 0) + 1;
         }
       });
-      const lines = ["📊 TỔNG HỢP CƠM TRƯA (" + orders.length + " suất):"];
+      const lines = ["TỔNG HỢP CƠM TRƯA (" + orders.length + " suất):"];
       Object.entries(dishTally).forEach(([k, v]) => lines.push(`- ${k}: ${v} suất`));
       if (Object.keys(riceTally).length) {
         lines.push("\nLượng cơm:");
@@ -1083,6 +996,29 @@
   }
 
   // ---------- Init ----------
+  // Roving focus for the tablist; preserve native button keyboard behavior.
+  const tabKeys = ["order", "menu", "ordersList"];
+  const tabButtons = ["tabOrderBtn", "tabMenuBtn", "tabOrdersListBtn"];
+  document.querySelector(".segment-tabs").addEventListener("keydown", e => {
+    const index = tabKeys.indexOf(currentTab);
+    const next = e.key === "ArrowRight" ? (index + 1) % 3 : e.key === "ArrowLeft" ? (index + 2) % 3 : e.key === "Home" ? 0 : e.key === "End" ? 2 : null;
+    if (next !== null) { e.preventDefault(); switchTab(tabKeys[next]); $(tabButtons[next]).focus(); }
+  });
+  $("nameInput").addEventListener("input", () => fieldError("nameError", "", "nameInput"));
+  // Modal focus containment, Escape and focus restoration.
+  const closeShare = () => { $("shareModal").hidden = true; document.body.style.overflow = ""; $("shareBtn").focus(); };
+  $("shareBtn").addEventListener("click", () => { document.body.style.overflow = "hidden"; $("closeShareBtn").focus(); });
+  $("closeShareBtn").addEventListener("click", closeShare);
+  $("shareModal").addEventListener("click", e => { if (e.target === $("shareModal")) closeShare(); });
+  $("shareModal").addEventListener("keydown", e => {
+    if (e.key === "Escape") closeShare();
+    if (e.key === "Tab") {
+      const first = $("closeShareBtn"), last = $("copyShareBtn");
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+  render();
   initWebSocket();
   fetchDateState(date);
 })();

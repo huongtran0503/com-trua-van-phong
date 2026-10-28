@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "plus jakarta sans",
+        "createdAt": "2026-10-28T06:50:46.159Z",
+        "reason": "Agent decided: preserve the existing project's Plus Jakarta Sans typography, present in public/index.html before this redesign. Retaining it supports visual continuity and Vietnamese text; the font is now self-hosted. This exception applies only to this font value."
+      }
+    ]
+  }
+}
