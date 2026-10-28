@@ -139,10 +139,7 @@
         setTimeout(() => { if (!serverless) initWebSocket(); }, 15000);
       };
 
-      ws.onerror = () => {
-        wsConnected = false;
-        checkCloudSync();
-      };
+      ws.onerror = () => { wsConnected = false; };   // onclose always follows and runs checkCloudSync
     } catch {
       wsConnected = false;
       checkCloudSync();
@@ -154,6 +151,8 @@
       const res = await fetch(`/api/health?_t=${Date.now()}`);
       if (res.ok) {
         serverless = (await res.json().catch(() => ({}))).env === "vercel";
+        try { serverless ? localStorage.setItem("com_trua_serverless", "1") : localStorage.removeItem("com_trua_serverless"); } catch {}
+        if (!serverless && !ws) initWebSocket();
         updateWsStatus("cloud");
         startSmartPolling();
       } else {
@@ -221,7 +220,13 @@
     }
   }
 
+  // Paint the last known state for this date instantly (stale-while-revalidate); the fetch replaces it.
+  function paintCached(d) {
+    try { if (JSON.parse(localStorage.getItem("com_trua_db_v1"))?.menus?.[d]) fallbackLocalLoad(d); } catch {}
+  }
+
   async function fetchDateState(d, silent = false) {
+    if (!menuLoaded) paintCached(d);
     try {
       const res = await fetch(`/api/state?date=${d}&_t=${Date.now()}`);
       if (!res.ok) throw new Error("Không tải được dữ liệu");
@@ -1069,6 +1074,9 @@
     }
   });
   render();
-  initWebSocket();
+  // Known serverless host: skip the doomed WebSocket handshake; checkCloudSync re-enables it if that changes.
+  let knownServerless = false;
+  try { knownServerless = localStorage.getItem("com_trua_serverless") === "1"; } catch {}
+  if (knownServerless) { serverless = true; checkCloudSync(); } else initWebSocket();
   fetchDateState(date);
 })();
