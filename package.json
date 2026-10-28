@@ -14,7 +14,9 @@
   "author": "huongtran0503",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^18.0.9",
     "express": "^4.21.2",
+    "mongodb": "^7.7.0",
     "ws": "^8.18.0"
   },
   "keywords": [

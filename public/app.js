@@ -84,7 +84,9 @@
     toastTimer = setTimeout(() => { el.hidden = true; }, 2600);
   }
 
-  // ---------- Realtime WebSocket Client ----------
+  // ---------- Realtime WebSocket & Cloud Sync Client ----------
+  let pollTimer = null;
+
   function initWebSocket() {
     const protocol = location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${location.host}`;
@@ -94,7 +96,7 @@
 
       ws.onopen = () => {
         wsConnected = true;
-        updateWsStatus(true);
+        updateWsStatus("ws");
         // Request state for current date
         ws.send(JSON.stringify({ type: "SUBSCRIBE_DATE", date }));
       };
@@ -110,32 +112,66 @@
 
       ws.onclose = () => {
         wsConnected = false;
-        updateWsStatus(false);
-        // Auto reconnect after 2.5s
-        setTimeout(initWebSocket, 2500);
+        // On serverless/Vercel or if WS closes, switch to Cloud Sync polling
+        checkCloudSync();
+        // Re-attempt WS after 15s in case running locally
+        setTimeout(initWebSocket, 15000);
       };
 
       ws.onerror = () => {
         wsConnected = false;
-        updateWsStatus(false);
+        checkCloudSync();
       };
     } catch {
       wsConnected = false;
-      updateWsStatus(false);
+      checkCloudSync();
     }
   }
 
-  function updateWsStatus(online) {
+  async function checkCloudSync() {
+    try {
+      const res = await fetch(`/api/health?_t=${Date.now()}`);
+      if (res.ok) {
+        updateWsStatus("cloud");
+        startSmartPolling();
+      } else {
+        updateWsStatus("offline");
+      }
+    } catch {
+      updateWsStatus("offline");
+    }
+  }
+
+  function startSmartPolling() {
+    if (pollTimer) return;
+    pollTimer = setInterval(() => {
+      // Smart Polling: only poll when tab is active/visible, not busy submitting, and WS is disconnected
+      if (!wsConnected && !document.hidden && !busy) {
+        fetchDateState(date, true);
+      }
+    }, 3500);
+  }
+
+  function updateWsStatus(mode) {
     const badge = $("wsStatusBadge");
     const text = $("wsStatusText");
     if (!badge || !text) return;
 
-    if (online) {
+    if (mode === "ws") {
       badge.classList.remove("offline");
+      badge.classList.remove("cloud-sync");
       text.textContent = "Realtime";
+      badge.title = "Đang kết nối Realtime WebSocket máy chủ";
+    } else if (mode === "cloud") {
+      badge.classList.remove("offline");
+      badge.classList.add("cloud-sync");
+      text.textContent = "Đám mây";
+      badge.title = "Đang đồng bộ trực tiếp MongoDB Cloud";
     } else {
       badge.classList.add("offline");
+      badge.classList.remove("cloud-sync");
       text.textContent = "Ngoại tuyến";
+      badge.title = "Mất kết nối mạng";
     }
   }
 
@@ -150,13 +186,9 @@
         menuLoaded = true;
         render();
       }
-    } else if (msg.type === "ORDER_UPDATED") {
+    } else if (msg.type === "ORDER_UPDATED" || msg.type === "ORDER_DELETED") {
       if (msg.date === date) {
-        fetchDateState(date);
-      }
-    } else if (msg.type === "ORDER_DELETED") {
-      if (msg.date === date) {
-        fetchDateState(date);
+        fetchDateState(date, true);
       }
     } else if (msg.type === "PEOPLE_UPDATED") {
       if (msg.data && msg.data.person) {
@@ -166,15 +198,24 @@
     }
   }
 
-  async function fetchDateState(d) {
+  async function fetchDateState(d, silent = false) {
     try {
-      const res = await fetch(`/api/state?date=${d}`);
+      const res = await fetch(`/api/state?date=${d}&_t=${Date.now()}`);
       if (res.ok) {
         const data = await res.json();
         applyState(data);
+        if (!wsConnected) {
+          updateWsStatus("cloud");
+          startSmartPolling();
+        }
+      } else {
+        if (!wsConnected) updateWsStatus("offline");
       }
     } catch (err) {
-      console.warn("Không kết nối được server, dùng fallback local:", err);
+      if (!silent) {
+        console.warn("Không kết nối được server, dùng fallback local:", err);
+      }
+      if (!wsConnected) updateWsStatus("offline");
       fallbackLocalLoad(d);
     }
   }
@@ -710,10 +751,15 @@
     updateThemeIcons(next);
   });
 
-  // Wi-Fi Share Modal
+  // Wi-Fi / Web Share Modal
   $("shareBtn").addEventListener("click", async () => {
     $("shareModal").hidden = false;
     const box = $("shareUrlBox");
+    // If running on a public domain (like Vercel), share current origin
+    if (location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
+      box.textContent = window.location.origin;
+      return;
+    }
     try {
       const res = await fetch("/api/network");
       if (res.ok) {
@@ -729,7 +775,14 @@
   });
   $("closeShareBtn").addEventListener("click", () => { $("shareModal").hidden = true; });
   $("copyShareBtn").addEventListener("click", () => {
-    copyText($("shareUrlBox").textContent, "Đã copy link Wi-Fi!");
+    copyText($("shareUrlBox").textContent, "Đã copy link truy cập!");
+  });
+
+  // Re-sync when switching back into tab
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && !wsConnected) {
+      fetchDateState(date, true);
+    }
   });
 
   // ---------- Init ----------

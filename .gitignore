@@ -5,3 +5,6 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 *.log
+.env
+.env*
+*.env
