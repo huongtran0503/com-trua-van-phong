@@ -289,6 +289,15 @@ img { display:block; max-width:100%; object-fit:cover; }
   .seg-controller { grid-template-columns:repeat(2,minmax(0,1fr)); }
   #viewAllOrdersBtn { margin-left:0; width:100%; justify-content:flex-start; margin-top:6px; }
 }
+@media (pointer:coarse) {
+  .circle-btn,.circle-btn-sm { width:44px; height:44px; }
+  .nav-arrow { position:relative; height:44px; }
+  .nav-arrow::after { content:''; position:absolute; inset:0 -8px; }
+  .pill-btn-sm,.btn-solid-sm,.btn-sm,.btn-subtle,.btn-danger-subtle,.tag-pill,.menu-dish-action,.text-link-btn,.hero-link { min-height:44px; }
+  .seg-item span { display:flex; align-items:center; justify-content:center; min-height:44px; }
+  .clean-checkbox,.date-navigator input { min-height:44px; }
+  .clean-checkbox input { width:20px; height:20px; }
+}
 @media (prefers-reduced-motion:reduce) {
   *,*::before,*::after { scroll-behavior:auto !important; transition:none !important; animation:none !important; }
 }
