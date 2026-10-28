@@ -1,0 +1,22 @@
+{
+  "name": "com-trua-van-phong",
+  "version": "1.0.0",
+  "description": "Ứng dụng đặt cơm trưa văn phòng Realtime - Phong cách Nhật Bản tối giản Xanh dương chàm, Trắng hạt gạo, Đen lá rong",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "ws": "^8.18.0"
+  },
+  "keywords": [
+    "lunch",
+    "office",
+    "realtime",
+    "onigiri"
+  ],
+  "author": "Antigravity",
+  "license": "ISC"
+}

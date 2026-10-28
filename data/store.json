@@ -1,0 +1,37 @@
+{
+  "menus": {
+    "2026-10-28": {
+      "date": "2026-10-28",
+      "dishes": [
+        "Sườn heo sốt chua ngọt",
+        "Bò xào tiêu đen rau củ",
+        "Gà ta chiên nước mắm",
+        "Cá basa kho tộ",
+        "Canh cải thịt băm",
+        "Rau muống xào tỏi"
+      ],
+      "postedBy": "admin",
+      "locked": false,
+      "lockedAt": null,
+      "updatedAt": 1793166066118
+    }
+  },
+  "orders": {
+    "ord_1793166084990_mtr88": {
+      "id": "ord_1793166084990_mtr88",
+      "date": "2026-10-28",
+      "name": "Hương Trần",
+      "dishes": [
+        "Sườn heo sốt chua ngọt",
+        "Canh cải thịt băm"
+      ],
+      "rice": "it",
+      "note": "ít cay",
+      "forUser": null,
+      "createdBy": "Hương Trần",
+      "createdAt": 1793166084990,
+      "updatedAt": 1793166084990
+    }
+  },
+  "people": {}
+}
