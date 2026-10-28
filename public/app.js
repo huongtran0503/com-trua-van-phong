@@ -361,7 +361,7 @@
 
   function renderMyOrderSummary() {
     const order = ownOrder();
-    $("noMyOrderHint").hidden = !!order; $("hasMyOrderBox").hidden = !order;
+    $("myOrderSummaryCard").hidden = !order;
     const ticket = $("myOrderTicket"); ticket.replaceChildren();
     if (!order) return;
     const name = document.createElement("strong"); name.textContent = displayName(order);
@@ -376,7 +376,7 @@
   function renderMenuTab() {
     const locked = !!menu?.locked, dishes = menu?.dishes || [];
     $("menuCoverDate").textContent = prettyDate(date);
-    $("menuCoverPoster").textContent = people.get(menu?.postedBy)?.name ? "Đăng bởi " + people.get(menu.postedBy).name : "Thực đơn văn phòng";
+    $("menuCoverPoster").textContent = people.get(menu?.postedBy)?.name ? "Đăng bởi " + people.get(menu.postedBy).name : "";
     $("menuCoverDishCount").textContent = dishes.length + " món";
     $("menuCoverStatus").textContent = !dishes.length ? "Chưa có thực đơn" : locked ? "Đã chốt nhận đơn" : "Đang nhận đơn";
     $("menuCoverStatus").className = "status-pill-green" + (locked ? " locked" : "");
@@ -410,8 +410,9 @@
 
   function renderOrderForm() {
     const locked = !!(menu && menu.locked);
-    const poster = menu && menu.postedBy ? (people.get(menu.postedBy) ? people.get(menu.postedBy).name : "Đồng nghiệp") : null;
-    $("posterLine").textContent = poster ? `Thực đơn bởi ${poster}` : "Chọn một hoặc nhiều món cho bữa trưa.";
+    const poster = people.get(menu?.postedBy)?.name;
+    $("posterLine").textContent = poster ? `Đăng bởi ${poster}` : "";
+    $("posterLine").hidden = !poster;
 
     // Lock Notice
     const lockNotice = $("lockNotice");
@@ -488,9 +489,9 @@
 
   function renderPreview() {
     $("pickCount").textContent = selected.length ? selected.length + " món đã chọn" : "Chưa chọn món";
-    $("selectedDishNames").textContent = selected.length ? selected.join(", ") : "Món bạn chọn sẽ xuất hiện ở đây.";
+    $("selectedDishNames").textContent = selected.join(", ");
     const btn = $("submitBtn");
-    btn.replaceChildren(document.createTextNode(busy ? "Đang gửi đơn..." : menu?.locked ? "Đã chốt đơn" : editingId ? "Cập nhật đơn" : "Đặt cơm ngay"), icon(busy ? "bowl-food" : "arrow-right"));
+    btn.replaceChildren(document.createTextNode(busy ? "Đang gửi đơn…" : menu?.locked ? "Đã chốt đơn" : editingId ? "Cập nhật đơn" : "Đặt cơm ngay"), icon(busy ? "bowl-food" : "arrow-right"));
     btn.setAttribute("aria-busy", String(busy));
     const tags = $("noteInput").value.split(",").map(s => s.trim());
     document.querySelectorAll("[data-tag]").forEach(btn => btn.setAttribute("aria-pressed", String(tags.includes(btn.dataset.tag))));
@@ -508,7 +509,6 @@
 
     $("orderEmpty").hidden = filtered.length > 0;
     $("orderEmptyTitle").textContent = searchQuery ? "Không tìm thấy đơn" : "Chưa có ai đặt cơm";
-    $("orderEmptyText").textContent = searchQuery ? "Thử tìm bằng tên hoặc món ăn khác." : "Đơn đặt của mọi người sẽ xuất hiện ở đây.";
     const locked = !!(menu && menu.locked);
     list.replaceChildren(...filtered.map((o) => {
       const li = document.createElement("li");
@@ -626,7 +626,7 @@
     $("lockBtn").textContent = locked ? "Mở nhận đơn" : "Chốt đơn";
     $("lockBtn").disabled = !canLock();
     $("copyTallyBtn").disabled = !orders.length;
-    $("lockHint").textContent = locked ? "Đang khóa không nhận đơn mới" : "Bấm để chốt danh sách khi hết giờ";
+    $("lockHint").textContent = locked ? "Đang khóa, không nhận đơn mới" : "";
   }
 
   // ---------- Actions ----------
@@ -774,7 +774,7 @@
     if (!lines.length) { fieldError("menuError", "Nhập ít nhất một món ăn."); return; }
     fieldError("menuError", "");
     $("saveMenuBtn").disabled = true;
-    $("saveMenuBtn").textContent = "Đang lưu...";
+    $("saveMenuBtn").textContent = "Đang lưu…";
     try {
       const res = await fetch("/api/menu", {
         method: "POST",
