@@ -136,12 +136,13 @@ app.get('/api/network', (req, res) => {
 });
 
 // 7. Health check
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
   res.json({
     status: 'ok',
     timestamp: Date.now(),
     env: process.env.VERCEL ? 'vercel' : 'local',
-    hasMongo: !!process.env.MONGODB_URI
+    hasMongo: !!process.env.MONGODB_URI,
+    db: await db.pingDb()
   });
 });
 
