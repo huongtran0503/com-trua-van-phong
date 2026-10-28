@@ -66,6 +66,19 @@
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
+  function getFoodEmoji(name) {
+    const n = (name || "").toLowerCase();
+    if (n.includes("sườn") || n.includes("heo") || n.includes("thịt")) return "🍖";
+    if (n.includes("bò")) return "🥩";
+    if (n.includes("gà")) return "🍗";
+    if (n.includes("cá") || n.includes("tôm") || n.includes("hải sản") || n.includes("basa")) return "🐟";
+    if (n.includes("canh") || n.includes("súp")) return "🍲";
+    if (n.includes("rau") || n.includes("cải") || n.includes("muống") || n.includes("xào")) return "🥗";
+    if (n.includes("trứng")) return "🍳";
+    if (n.includes("đậu") || n.includes("tofu")) return "🥢";
+    return "🍱";
+  }
+
   function orderLine(o) {
     const dishes = (o.dishes && o.dishes.length) ? o.dishes.join(" + ") : "(chưa chọn món)";
     const r = RICE[o.rice] ? ` (${RICE[o.rice]})` : "";
@@ -360,25 +373,17 @@
     $("menuCoverDate").textContent = prettyDate(date);
     const poster = menu && menu.postedBy ? (people.get(menu.postedBy) ? people.get(menu.postedBy).name : "Đồng nghiệp") : "Đồng nghiệp";
     $("menuCoverPoster").textContent = poster;
-    $("menuCoverDishCount").textContent = `${dishes.length} món ăn`;
-    $("menuShowcaseCount").textContent = dishes.length;
+    $("menuCoverDishCount").textContent = `${dishes.length} món`;
 
     const st = $("menuCoverStatus");
     if (st) {
       if (locked) {
         st.textContent = "Đã chốt nhận đơn";
-        st.className = "menu-cover-status locked";
+        st.className = "status-pill-green locked";
       } else {
         st.textContent = "Đang nhận đơn";
-        st.className = "menu-cover-status";
+        st.className = "status-pill-green";
       }
-    }
-
-    if (menu && menu.updatedAt) {
-      const dt = new Date(menu.updatedAt);
-      $("menuCoverUpdate").textContent = `Cập nhật lúc ${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
-    } else {
-      $("menuCoverUpdate").textContent = "";
     }
 
     // Popularity counts
@@ -397,11 +402,11 @@
     if (!dishes.length) {
       const empty = document.createElement("div");
       empty.style.gridColumn = "1 / -1";
-      empty.className = "empty";
+      empty.className = "empty-state-clean";
       empty.innerHTML = `
-        <div class="empty-icon">📋</div>
-        <strong>Chưa có thực đơn cho ngày này</strong>
-        <span>Hãy bấm "Soạn / Chỉnh sửa thực đơn" để nhập các món ăn hôm nay.</span>
+        <div class="empty-emoji">📋</div>
+        <h4>Chưa có thực đơn cho ngày này</h4>
+        <p>Bấm "Sửa thực đơn" để thêm danh sách món ăn hôm nay.</p>
       `;
       grid.appendChild(empty);
       return;
@@ -409,51 +414,52 @@
 
     dishes.forEach((dish, idx) => {
       const count = dishCounts[dish] || 0;
+      const isChosen = selected.includes(dish);
+
       const card = document.createElement("div");
-      card.className = "menu-dish-card";
-      card.title = `Bấm để chọn món "${dish}" và chuyển sang Đặt cơm`;
+      card.className = "food-card";
 
-      const header = document.createElement("div");
-      header.className = "menu-dish-header";
+      const top = document.createElement("div");
+      top.className = "food-card-top";
 
-      const numBadge = document.createElement("span");
-      numBadge.className = "dish-num-badge";
-      numBadge.textContent = idx + 1;
+      const icon = document.createElement("div");
+      icon.className = "food-card-icon";
+      icon.textContent = getFoodEmoji(dish);
 
-      const popBadge = document.createElement("span");
-      popBadge.className = "dish-popularity-badge" + (count > 0 ? " hot" : "");
-      popBadge.textContent = count > 0 ? `🔥 ${count} người chọn` : "Chưa ai chọn";
+      const badge = document.createElement("span");
+      badge.className = "food-card-badge" + (count > 0 ? " popular" : "");
+      badge.textContent = count > 0 ? `🔥 ${count} người chọn` : "Món ngon";
 
-      header.appendChild(numBadge);
-      header.appendChild(popBadge);
+      top.append(icon, badge);
 
       const nameEl = document.createElement("div");
-      nameEl.className = "menu-dish-name";
+      nameEl.className = "food-card-name";
       nameEl.textContent = dish;
 
-      const actionRow = document.createElement("div");
-      actionRow.className = "menu-dish-action";
+      const bottom = document.createElement("div");
+      bottom.className = "food-card-bottom";
 
-      const isChosen = selected.includes(dish);
-      const actionLabel = document.createElement("span");
-      actionLabel.className = "menu-dish-action-label";
-      actionLabel.innerHTML = isChosen ? `✓ Đã chọn trong đơn` : `🍙 Chọn món này ➜`;
+      const subText = document.createElement("span");
+      subText.style.fontSize = "0.82rem";
+      subText.style.color = "var(--text-muted)";
+      subText.textContent = `Món #${idx + 1}`;
 
-      actionRow.appendChild(actionLabel);
+      const actionBtn = document.createElement("button");
+      actionBtn.type = "button";
+      actionBtn.className = "food-card-action-btn" + (isChosen ? " active" : "");
+      actionBtn.textContent = isChosen ? "✓ Đã chọn" : "+ Chọn món";
 
-      card.appendChild(header);
-      card.appendChild(nameEl);
-      card.appendChild(actionRow);
+      bottom.append(subText, actionBtn);
+      card.append(top, nameEl, bottom);
 
       card.addEventListener("click", () => {
         if (!selected.includes(dish)) {
           selected.push(dish);
         }
         switchTab("order");
-        renderOrderForm();
+        renderDishChips(locked);
+        renderPreview();
         toast(`Đã chọn: ${dish}`);
-        const chipEl = document.querySelector(`.dish-chip[data-dish="${dish}"]`);
-        if (chipEl) chipEl.scrollIntoView({ behavior: "smooth", block: "center" });
       });
 
       grid.appendChild(card);
@@ -463,13 +469,12 @@
   function renderOrderForm() {
     const locked = !!(menu && menu.locked);
     const poster = menu && menu.postedBy ? (people.get(menu.postedBy) ? people.get(menu.postedBy).name : "Đồng nghiệp") : null;
-    $("posterLine").textContent = poster ? `Thực đơn đăng bởi: ${poster}` : "";
+    $("posterLine").textContent = poster ? `Thực đơn bởi ${poster}` : "";
 
     // Lock Notice
     const lockNotice = $("lockNotice");
     lockNotice.hidden = !locked;
     if (locked) {
-      $("lockNoticeText").textContent = "Đơn ngày này đã chốt sổ.";
       $("unlockBtn").hidden = !canLock();
     }
 
@@ -498,14 +503,14 @@
     // Dish Chips
     renderDishChips(locked);
 
-    // Preview
+    // Preview & Button text
     renderPreview();
 
     // Disable inputs if locked
     $("submitBtn").disabled = locked;
-    document.querySelectorAll("#orderForm input, #orderForm textarea, #orderForm button:not(#unlockBtn):not(#editMenuBtn)")
+    document.querySelectorAll("#orderForm input, #orderForm textarea, #orderForm button:not(#unlockBtn)")
       .forEach(el => {
-        if (el.id !== "unlockBtn" && el.id !== "editMenuBtn") {
+        if (el.id !== "unlockBtn") {
           el.disabled = locked;
         }
       });
@@ -517,47 +522,54 @@
 
     const dishes = (menu && menu.dishes) || [];
     dishes.forEach((d) => {
-      const label = document.createElement("label");
-      label.className = "chip";
+      const isChosen = selected.includes(d);
+      const card = document.createElement("div");
+      card.className = "dish-choice-card" + (isChosen ? " selected" : "");
 
-      const input = document.createElement("input");
-      input.type = "checkbox";
-      input.value = d;
-      input.checked = selected.includes(d);
-      input.disabled = locked;
+      const left = document.createElement("div");
+      left.className = "dish-choice-left";
 
-      input.addEventListener("change", () => {
-        if (input.checked) {
-          if (!selected.includes(d)) selected.push(d);
-        } else {
-          selected = selected.filter(x => x !== d);
-        }
-        renderPreview();
-      });
+      const icon = document.createElement("span");
+      icon.className = "dish-choice-icon";
+      icon.textContent = getFoodEmoji(d);
 
-      const span = document.createElement("span");
-      span.textContent = d;
+      const title = document.createElement("span");
+      title.className = "dish-choice-title";
+      title.textContent = d;
 
-      label.append(input, span);
-      wrap.appendChild(label);
+      left.append(icon, title);
+
+      const check = document.createElement("div");
+      check.className = "dish-choice-check";
+      check.textContent = isChosen ? "✓" : "";
+
+      card.append(left, check);
+
+      if (!locked) {
+        card.addEventListener("click", () => {
+          if (selected.includes(d)) {
+            selected = selected.filter(x => x !== d);
+          } else {
+            selected.push(d);
+          }
+          renderDishChips(locked);
+          renderPreview();
+        });
+      }
+
+      wrap.appendChild(card);
     });
   }
 
   function renderPreview() {
-    const name = targetName() || "Tên bạn";
-    const riceInput = document.querySelector('#riceSeg input:checked');
-    const rice = riceInput ? riceInput.value : "";
-    $("pickCount").textContent = selected.length ? `· đã chọn ${selected.length} món` : "";
-
-    const p = $("preview");
-    p.replaceChildren();
-    if (!selected.length) {
-      p.innerHTML = "<span style='color:var(--muted)'>Chọn ít nhất một món ở trên để xem trước đơn đặt.</span>";
-      return;
+    const count = selected.length;
+    $("pickCount").textContent = count ? `· Đã chọn ${count} món` : "Chọn ít nhất 1 món";
+    const subBtn = $("submitBtn");
+    if (editingId) {
+      subBtn.textContent = count ? `Cập nhật đơn (${count} món) ➜` : "Cập nhật đơn ➜";
+    } else {
+      subBtn.textContent = count ? `Đặt cơm ngay (${count} món) ➜` : "Đặt cơm ngay ➜";
     }
-    const b = document.createElement("b");
-    b.textContent = name + ": ";
-    p.append(b, orderLine({ rice, dishes: selected, note: $("noteInput").value.trim() }));
   }
 
   function renderList() {
@@ -565,7 +577,6 @@
     const totalCount = orders.length;
     $("countLabel").textContent = `${totalCount} suất`;
     $("orderEmpty").hidden = totalCount > 0;
-    $("searchWrap").style.display = totalCount >= 4 ? "block" : "none";
 
     const filtered = searchQuery
       ? orders.filter(o => displayName(o).toLowerCase().includes(searchQuery.toLowerCase()) || orderLine(o).toLowerCase().includes(searchQuery.toLowerCase()))
@@ -574,7 +585,10 @@
     const locked = !!(menu && menu.locked);
     list.replaceChildren(...filtered.map((o) => {
       const li = document.createElement("li");
-      if (o.id === editingId) li.className = "editing";
+      li.className = "order-row-card";
+
+      const left = document.createElement("div");
+      left.className = "order-row-left";
 
       const av = document.createElement("div");
       av.className = "order-avatar";
@@ -582,62 +596,96 @@
       av.textContent = getInitials(name);
       av.style.background = getAvatarColor(name);
 
-      const body = document.createElement("div");
-      body.className = "order-body";
+      const info = document.createElement("div");
+      info.className = "order-info";
 
-      const headerLine = document.createElement("div");
-      headerLine.className = "order-header-line";
+      const who = document.createElement("div");
+      who.className = "order-user-name";
+      who.textContent = name + (o.forUser && o.createdBy && o.createdBy !== name ? ` (bởi ${o.createdBy})` : "");
 
-      const who = document.createElement("span");
-      who.className = "who";
-      who.textContent = name;
-      headerLine.appendChild(who);
-
-      if (o.forUser && o.createdBy && o.createdBy !== name) {
-        const byTag = document.createElement("span");
-        byTag.className = "by-tag";
-        byTag.textContent = `(bởi ${o.createdBy})`;
-        headerLine.appendChild(byTag);
-      }
-
-      const what = document.createElement("span");
-      what.className = "what";
+      const what = document.createElement("div");
+      what.className = "order-dishes-text";
       what.textContent = orderLine(o);
 
-      body.append(headerLine, what);
+      info.append(who, what);
+      left.append(av, info);
 
       const acts = document.createElement("div");
-      acts.className = "acts";
+      acts.className = "order-row-actions";
 
       const mayManage = isPoster() || o.createdBy === myId || o.forUser === myId;
 
-      const edit = document.createElement("button");
-      edit.className = "ghost small";
-      edit.textContent = "Sửa";
-      edit.hidden = !mayManage || locked;
-      edit.addEventListener("click", () => startEdit(o));
+      if (mayManage && !locked) {
+        const edit = document.createElement("button");
+        edit.type = "button";
+        edit.className = "btn-sm btn-subtle";
+        edit.textContent = "Sửa";
+        edit.addEventListener("click", () => startEdit(o));
 
-      const del = document.createElement("button");
-      del.className = "ghost small danger";
-      del.textContent = "Xóa";
-      del.hidden = !mayManage || locked;
+        const del = document.createElement("button");
+        del.type = "button";
+        del.className = "btn-sm btn-danger-subtle";
+        del.textContent = "Xóa";
 
-      let armTimer;
-      del.addEventListener("click", async () => {
-        if (!del.classList.contains("armed")) {
-          del.classList.add("armed");
-          del.textContent = "Xóa?";
-          armTimer = setTimeout(() => { del.classList.remove("armed"); del.textContent = "Xóa"; }, 3000);
-          return;
-        }
-        clearTimeout(armTimer);
-        deleteOrder(o);
-      });
+        let armTimer;
+        del.addEventListener("click", async () => {
+          if (!del.classList.contains("armed")) {
+            del.classList.add("armed");
+            del.textContent = "Xóa?";
+            armTimer = setTimeout(() => { del.classList.remove("armed"); del.textContent = "Xóa"; }, 3000);
+            return;
+          }
+          clearTimeout(armTimer);
+          deleteOrder(o);
+        });
 
-      acts.append(edit, del);
-      li.append(av, body, acts);
+        acts.append(edit, del);
+      }
+
+      li.append(left, acts);
       return li;
     }));
+
+    renderTally();
+  }
+
+  function renderTally() {
+    const container = $("tallyCards");
+    if (!container) return;
+    container.replaceChildren();
+
+    if (!orders.length) {
+      container.innerHTML = "<span style='font-size:0.82rem;color:var(--text-muted)'>Chưa có đơn đặt</span>";
+      return;
+    }
+
+    const dishTally = {};
+    const riceTally = {};
+    orders.forEach(o => {
+      (o.dishes || []).forEach(d => {
+        dishTally[d] = (dishTally[d] || 0) + 1;
+      });
+      if (o.rice) {
+        const rName = RICE[o.rice] || o.rice;
+        riceTally[rName] = (riceTally[rName] || 0) + 1;
+      }
+    });
+
+    Object.entries(dishTally).forEach(([name, count]) => {
+      const chip = document.createElement("div");
+      chip.className = "tally-chip";
+      chip.innerHTML = `<span>${getFoodEmoji(name)} ${name}</span>: <strong>${count}</strong>`;
+      container.appendChild(chip);
+    });
+
+    Object.entries(riceTally).forEach(([rName, count]) => {
+      const chip = document.createElement("div");
+      chip.className = "tally-chip";
+      chip.style.background = "var(--surface)";
+      chip.style.border = "1px solid var(--border)";
+      chip.innerHTML = `<span>🍚 ${rName}</span>: <strong>${count}</strong>`;
+      container.appendChild(chip);
+    });
   }
 
   function messageText() {
@@ -1009,6 +1057,28 @@
       if (myOrder) {
         deleteOrder(myOrder);
       }
+    });
+  }
+
+  if ($("copyTallyBtn")) {
+    $("copyTallyBtn").addEventListener("click", () => {
+      if (!orders.length) { toast("Chưa có đơn để tổng hợp"); return; }
+      const dishTally = {};
+      const riceTally = {};
+      orders.forEach(o => {
+        (o.dishes || []).forEach(d => { dishTally[d] = (dishTally[d] || 0) + 1; });
+        if (o.rice) {
+          const rName = RICE[o.rice] || o.rice;
+          riceTally[rName] = (riceTally[rName] || 0) + 1;
+        }
+      });
+      const lines = ["📊 TỔNG HỢP CƠM TRƯA (" + orders.length + " suất):"];
+      Object.entries(dishTally).forEach(([k, v]) => lines.push(`- ${k}: ${v} suất`));
+      if (Object.keys(riceTally).length) {
+        lines.push("\nLượng cơm:");
+        Object.entries(riceTally).forEach(([k, v]) => lines.push(`- ${k}: ${v}`));
+      }
+      copyText(lines.join("\n"), "Đã copy tổng hợp món!");
     });
   }
 
