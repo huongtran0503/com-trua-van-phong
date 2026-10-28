@@ -1,0 +1,99 @@
+@font-face {
+  font-family: "Phosphor";
+  src: url('./Phosphor.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+.ph {
+  /* use !important to prevent issues with browser extensions that change fonts */
+  font-family: "Phosphor" !important;
+  speak: never;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+
+  /* Enable Ligatures ================ */
+  letter-spacing: 0;
+  -webkit-font-feature-settings: "liga";
+  -moz-font-feature-settings: "liga=1";
+  -moz-font-feature-settings: "liga";
+  -ms-font-feature-settings: "liga" 1;
+  font-feature-settings: "liga";
+  -webkit-font-variant-ligatures: discretionary-ligatures;
+  font-variant-ligatures: discretionary-ligatures;
+
+  /* Better Font Rendering =========== */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.ph.ph-bowl-food:before {
+  content: "\eaa4";
+}
+.ph.ph-book-open:before {
+  content: "\e0e6";
+}
+.ph.ph-receipt:before {
+  content: "\e3ec";
+}
+.ph.ph-export:before {
+  content: "\eaf0";
+}
+.ph.ph-sun:before {
+  content: "\e472";
+}
+.ph.ph-moon:before {
+  content: "\e330";
+}
+.ph.ph-calendar-blank:before {
+  content: "\e10a";
+}
+.ph.ph-caret-left:before {
+  content: "\e138";
+}
+.ph.ph-caret-right:before {
+  content: "\e13a";
+}
+.ph.ph-arrow-up-right:before {
+  content: "\e092";
+}
+.ph.ph-lock-simple:before {
+  content: "\e308";
+}
+.ph.ph-user-circle:before {
+  content: "\e4c4";
+}
+.ph.ph-arrow-right:before {
+  content: "\e06c";
+}
+.ph.ph-check-circle:before {
+  content: "\e184";
+}
+.ph.ph-pencil-simple:before {
+  content: "\e3b4";
+}
+.ph.ph-x:before {
+  content: "\e4f6";
+}
+.ph.ph-magnifying-glass:before {
+  content: "\e30c";
+}
+.ph.ph-copy:before {
+  content: "\e1ca";
+}
+.ph.ph-plus:before {
+  content: "\e3d4";
+}
+.ph.ph-check:before {
+  content: "\e182";
+}
+.ph.ph-fork-knife:before {
+  content: "\e262";
+}
+.ph.ph-wifi-slash:before {
+  content: "\e4f2";
+}
