@@ -716,9 +716,14 @@
     try {
       const res = await fetch("/api/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error || "Không gửi được đơn. Vui lòng thử lại."); }
+      const { order } = await res.json();
       toast(wasEditing ? "Đã cập nhật đơn." : "Đã đặt cơm cho " + name + "!");
-      if (requestDate === date) resetForm();
-      await fetchDateState(requestDate, true);
+      if (requestDate === date) {
+        resetForm();
+        // Show the saved order now; the full refresh below syncs everyone else's in the background.
+        if (order) orders = [...orders.filter(o => o.id !== order.id), order].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      }
+      fetchDateState(requestDate, true);
     } catch (err) { fieldError("submitError", err instanceof TypeError ? "Chưa gửi được đơn. Kiểm tra kết nối rồi thử lại, món đã chọn vẫn được giữ." : err.message); }
     finally { busy = false; render(); }
   }
@@ -731,7 +736,8 @@
       const res = await fetch(`/api/order/${o.id}`, { method: "DELETE" });
       if (res.ok) {
         toast(`Đã xóa đơn của ${displayName(o)}`);
-        fetchDateState(date);
+        orders = orders.filter(x => x.id !== o.id); render();
+        fetchDateState(date, true);
       } else {
         const error = await res.json();
         toast(error.error || "Không xóa được đơn. Vui lòng thử lại.");
