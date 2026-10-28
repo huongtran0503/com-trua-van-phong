@@ -74,6 +74,7 @@ img { display:block; max-width:100%; object-fit:cover; }
 .pill-btn-sm:hover { background:var(--surface-subtle); }
 .lunch-hero { display:grid; grid-template-columns:1fr 1.15fr; overflow:hidden; border-radius:20px; background:var(--surface-subtle); height:260px; margin-bottom:38px; }
 .hero-copy { padding:31px 38px; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; }
+.hero-greeting { font-size:16px; font-weight:600; margin-bottom:8px; overflow-wrap:anywhere; }
 .hero-copy h1 { font-size:39px; line-height:1.17; letter-spacing:-1.65px; font-weight:700; }
 .hero-link { font-size:14px; font-weight:700; padding:0; margin-top:18px; gap:24px; }
 .hero-link:hover { color:var(--accent); }
@@ -291,6 +292,18 @@ img { display:block; max-width:100%; object-fit:cover; }
   .dish-choice-check { height:24px; width:24px; }
   .seg-controller { grid-template-columns:repeat(2,minmax(0,1fr)); }
   #viewAllOrdersBtn { margin-left:0; width:100%; justify-content:flex-start; margin-top:6px; }
+}
+@media (min-width:1200px) {
+  #viewOrder { display:grid; grid-template-columns:272px minmax(0,1fr); column-gap:36px; align-items:start; }
+  #viewOrder > * { grid-column:2; }
+  #viewOrder > .lunch-hero { grid-column:1; grid-row:1 / span 4; position:sticky; top:24px; height:auto; grid-template-columns:1fr; margin:0; }
+  .hero-copy { padding:28px 26px 26px; }
+  .hero-copy h1 { font-size:30px; letter-spacing:-1.1px; overflow-wrap:anywhere; }
+  .hero-photo { aspect-ratio:1; }
+  .hero-photo img { object-position:60% 50%; }
+}
+@media (min-width:1500px) {
+  .app-shell { max-width:1440px; }
 }
 @media (pointer:coarse) {
   .circle-btn,.circle-btn-sm,.date-picker-btn { width:44px; height:44px; }

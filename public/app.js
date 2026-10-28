@@ -438,6 +438,9 @@
       $("meAvatar").textContent = getInitials(curName);
       $("meAvatar").style.background = getAvatarColor(curName);
     }
+    $("heroGreeting").textContent = curName ? `Chào ${curName}` : "";
+    $("heroGreeting").hidden = !curName;
+    $("formTitle").replaceChildren(...(curName ? ["Hôm nay ăn gì?"] : ["Hôm nay bạn", document.createElement("br"), "muốn ăn gì?"]));
 
     // Suggestions datalist for ordering for others
     const dl = $("peopleList");
