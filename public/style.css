@@ -158,6 +158,7 @@ img { display:block; max-width:100%; object-fit:cover; }
 .menu-hero-banner { display:flex; align-items:center; justify-content:space-between; gap:24px; margin:12px 0 32px; }
 .menu-hero-date { font-size:15px; font-weight:500; color:var(--text-muted); margin-top:8px; }
 .menu-hero-meta { display:flex; gap:16px; flex-wrap:wrap; color:var(--text-muted); font-size:13px; margin-top:10px; }
+.menu-hero-meta span:empty { display:none; }
 .status-pill-green { color:var(--accent); }
 .status-pill-green.locked { color:var(--text-muted); }
 .menu-hero-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
