@@ -106,6 +106,7 @@
 
   // ---------- Realtime WebSocket & Cloud Sync Client ----------
   let pollTimer = null;
+  let serverless = false;   // Vercel has no WebSocket; stop retrying once health says so
 
   function initWebSocket() {
     const protocol = location.protocol === "https:" ? "wss:" : "ws:";
@@ -135,7 +136,7 @@
         // On serverless/Vercel or if WS closes, switch to Cloud Sync polling
         checkCloudSync();
         // Re-attempt WS after 15s in case running locally
-        setTimeout(initWebSocket, 15000);
+        setTimeout(() => { if (!serverless) initWebSocket(); }, 15000);
       };
 
       ws.onerror = () => {
@@ -152,6 +153,7 @@
     try {
       const res = await fetch(`/api/health?_t=${Date.now()}`);
       if (res.ok) {
+        serverless = (await res.json().catch(() => ({}))).env === "vercel";
         updateWsStatus("cloud");
         startSmartPolling();
       } else {
