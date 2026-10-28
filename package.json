@@ -7,7 +7,8 @@
     "start": "node server.js",
     "dev": "node server.js",
     "test:ui": "node tests/ui-smoke.cjs",
-    "audit:ui": "node tests/lighthouse.cjs"
+    "audit:ui": "node tests/lighthouse.cjs",
+    "test:db": "node tests/db-unavailable.cjs"
   },
   "repository": {
     "type": "git",
