@@ -15,6 +15,8 @@ const unavailable = { message: 'Không kết nối được cơ sở dữ liệu
     assert.equal(global._mongoClientPromise, null, 'Failed connection is not cached');
     await assert.rejects(db.getStateForDate(), unavailable);
     await assert.rejects(db.savePerson({ id: 'u1', name: 'Minh Anh' }), unavailable);
+    await assert.rejects(db.getRatings('2026-01-05'), unavailable);
+    await assert.rejects(db.saveRating({ userId: 'u1', date: '2026-01-05', dish: 'Cá basa kho tộ', stars: 5 }), unavailable);
     const after = fs.existsSync(storeFile) ? fs.readFileSync(storeFile, 'utf8') : null;
     assert.equal(after, before, 'store.json untouched while Mongo is configured');
   } finally { console.error = quiet; }

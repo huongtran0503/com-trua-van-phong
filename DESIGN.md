@@ -18,6 +18,15 @@ The menu remains an array of dish names, entered one per line for each date.
 There are no dish photo mappings, category records or additional management screens.
 The hero photograph is decorative and stays the same when the daily menu changes.
 
+## Dish ratings
+
+After lunch, each person rates the dishes in their own order (1-5 stars, tap the same star to clear).
+Dishes are matched across days by normalized name, since the menu is retyped daily. A dish is
+"được đề cử" once at least two people rated it and its score, pulled toward the overall mean
+with a weight of two votes, is 4 or higher. Recommended dishes get an amber star on the order
+chips, a one-line "Đề cử hôm nay" under the menu heading, and the "Món được đề cử" card on the
+Thực đơn tab. Ratings use `/api/ratings` and `/api/rating`, separate from the 3.5s state poll.
+
 ## Tokens
 
 - Typography: self-hosted Plus Jakarta Sans, including Vietnamese and Latin subsets.
@@ -25,6 +34,7 @@ The hero photograph is decorative and stays the same when the daily menu changes
 - Light: canvas `#fafafa`, surface `#fefefe`, text `#222426`.
 - Dark: canvas `#17191b`, surface `#1e2023`, text `#f0f1f2`.
 - Brand and accent: cucumber green `#2f6b3b` (buttons, selection, icon tile; white text 6.1:1), lightened to cucumber flesh `#9ccb86` in dark mode. Selected surfaces use `#eaf3e5`.
+- Stars: amber `#b87308` (dark `#e8b04a`) for star glyphs only, never text; unset stars `#d4d7da` (dark `#4a4f55`).
 - Shapes: 20px hero, 16px panels, 12px dish choices, 10px inputs, pill buttons.
 - Layers: form content 1, toast 10, dialog 20, skip link 30.
 - Below 768px: explicit single-column form in its original field order.
