@@ -51,6 +51,7 @@ img { display:block; max-width:100%; object-fit:cover; }
 .segment-tabs { display:flex; align-self:stretch; gap:24px; }
 .segment-tab { position:relative; padding:0 1px; font-size:14px; color:var(--text-muted); font-weight:600; }
 .segment-tab .ph { font-size:18px; }
+.tab-icon { width:18px; height:18px; flex-shrink:0; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linejoin:round; }
 .segment-tab.active { color:var(--text-main); }
 .segment-tab.active::after { content:''; position:absolute; height:2px; background:var(--text-main); inset:auto 0 -1px; }
 .segment-badge { font-size:12px; font-weight:600; border-radius:6px; min-width:22px; padding:1px 6px; background:var(--surface-subtle); color:var(--text-muted); }
@@ -212,9 +213,17 @@ img { display:block; max-width:100%; object-fit:cover; }
 .menu-dish-name { font-size:16px; font-weight:600; overflow-wrap:anywhere; }
 .menu-dish-count { display:flex; align-items:center; gap:5px; font-size:13px; color:var(--text-muted); margin-top:4px; }
 .menu-dish-count.recommended .star-icon { color:var(--star); }
-.menu-body { display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:36px; align-items:start; }
-.menu-body > .menu-dishes-list { grid-column:1; grid-row:1; }
-.menu-body > .top-dishes { grid-column:2; grid-row:1; position:sticky; top:24px; }
+.view-subtitle { font-size:14px; color:var(--text-muted); margin-top:4px; max-width:60ch; }
+.rating-filters { display:flex; flex-wrap:wrap; gap:6px; margin-top:-8px; }
+.rating-list { list-style:none; margin:0; padding:0; }
+.rating-row { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 0; border-bottom:1px solid var(--border); }
+.rating-row-info { min-width:0; display:flex; flex-direction:column; gap:2px; }
+.rating-row-name { font-size:15px; font-weight:600; overflow-wrap:anywhere; }
+.rating-row-meta { display:flex; align-items:center; gap:5px; font-size:13px; color:var(--text-muted); }
+.rating-row-meta.recommended .star-icon { color:var(--star); }
+.rating-tag { display:inline-block; vertical-align:2px; margin-left:4px; padding:0 7px; border-radius:999px; font-size:11px; font-weight:700; line-height:18px; background:var(--accent-soft); color:var(--accent); }
+.rating-row .star-btn { font-size:22px; padding:6px 3px; }
+.ratings-side .top-dishes { position:sticky; top:24px; }
 .top-dish-list { list-style:none; margin:0; padding:0; }
 .top-dish { display:flex; align-items:center; gap:12px; padding:9px 0; border-bottom:1px solid var(--border-subtle); }
 .top-dish:last-child { border-bottom:0; }
@@ -265,7 +274,6 @@ img { display:block; max-width:100%; object-fit:cover; }
   .segment-tabs { justify-self:center; gap:20px; }
   .status-indicator { display:none; }
   .order-layout,.orders-layout-grid { grid-template-columns:minmax(0,1fr) 310px; column-gap:26px; }
-  .menu-body { grid-template-columns:minmax(0,1fr) 290px; gap:26px; }
   .section-block { padding-left:20px; padding-right:20px; }
   .order-action-bar { margin:0 20px; }
   .menu-hero-actions { max-width:270px; justify-content:flex-end; }
@@ -307,9 +315,16 @@ img { display:block; max-width:100%; object-fit:cover; }
   .menu-hero-actions { margin-top:22px; max-width:none; justify-content:flex-start; }
   .menu-hero-meta { gap:12px; }
   .orders-layout-grid { grid-template-columns:1fr; gap:30px; margin-top:5px; }
-  .menu-body { grid-template-columns:1fr; gap:8px; }
-  .menu-body > .menu-dishes-list,.menu-body > .top-dishes { grid-column:1; grid-row:auto; position:static; }
+  /* Phone order: title, top 5, then search, filters and the list. */
+  .ratings-layout { gap:16px; }
+  .ratings-layout > .orders-main-col,.ratings-layout .col-header-bar { display:contents; }
+  .ratings-layout .col-header-bar > div:first-child { order:-2; }
+  .ratings-side { order:-1; }
+  .ratings-layout .rating-filters { margin-top:0; }
+  .ratings-side .top-dishes { position:static; }
   .top-dish:nth-child(n+6) { display:none; }
+  .rating-row { gap:10px; }
+  .rating-row .star-btn { font-size:20px; padding:6px 2px; }
   .clean-card { padding:20px; }
   .order-row-card { align-items:flex-start; }
   .order-row-actions { flex-direction:column; }
@@ -320,7 +335,7 @@ img { display:block; max-width:100%; object-fit:cover; }
   .app-shell { padding:0 16px; }
   .toolbar-date { min-width:0; line-height:1.4; }
   .segment-tab { gap:6px; padding:0 3px; }
-  .segment-tab .ph { font-size:17px; }
+  .segment-tab .ph,.segment-tab .tab-icon { display:none; }
   .seg-controller { grid-template-columns:repeat(2,minmax(0,1fr)); }
   #viewAllOrdersBtn { margin-left:0; width:100%; justify-content:flex-start; margin-top:6px; }
 }

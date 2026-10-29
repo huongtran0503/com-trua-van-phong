@@ -115,36 +115,35 @@ app.post('/api/people', async (req, res) => {
   }
 });
 
-// 6. Dish ratings: all-time stats plus the raw ratings for one day
+// 6. Dish ratings: every dish ever served with its votes, plus the caller's own votes
 app.get('/api/ratings', async (req, res) => {
   try {
-    res.json(await db.getRatings(req.query.date || db.todayVN()));
+    const user = typeof req.query.user === 'string' ? req.query.user.slice(0, 80) : '';
+    res.json(await db.getRatings(user));
   } catch (err) {
     console.error('Lỗi /api/ratings:', err);
     res.status(500).json({ error: 'Lỗi máy chủ khi lấy đánh giá' });
   }
 });
 
+// One vote per person per dish; no order needed. stars 0 withdraws the vote.
 app.post('/api/rating', async (req, res) => {
   try {
-    const { userId, date, dish, stars } = req.body;
+    const { userId, dish, stars } = req.body;
     if (typeof userId !== 'string' || !userId || userId.length > 80 ||
         typeof dish !== 'string' || !dish.trim() || dish.length > 120 ||
-        !/^\d{4}-\d{2}-\d{2}$/.test(date || '') || !Number.isInteger(stars) || stars < 0 || stars > 5) {
+        !Number.isInteger(stars) || stars < 0 || stars > 5) {
       return res.status(400).json({ error: 'Đánh giá không hợp lệ' });
     }
-    if (date > db.todayVN()) {
-      return res.status(400).json({ error: 'Chưa ăn thì chưa chấm được nhé.' });
-    }
 
-    const rating = await db.saveRating({ userId, date, dish, stars });
+    const rating = await db.saveRating({ userId, dish, stars });
     if (broadcastHook) {
-      broadcastHook('RATING_UPDATED', date, { rating });
+      broadcastHook('RATING_UPDATED', db.todayVN(), { rating });
     }
     res.json({ success: true, rating });
   } catch (err) {
-    if (err.message === 'NOT_ORDERED') {
-      return res.status(403).json({ error: 'Bạn chỉ chấm được món mình đã đặt.' });
+    if (err.message === 'UNKNOWN_DISH') {
+      return res.status(404).json({ error: 'Món này chưa có trong thực đơn nào.' });
     }
     console.error('Lỗi /api/rating:', err);
     res.status(500).json({ error: err.message || 'Lỗi khi lưu đánh giá' });

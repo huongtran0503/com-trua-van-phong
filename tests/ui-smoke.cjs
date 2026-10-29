@@ -16,12 +16,14 @@ const fixture = (date) => ({date, menu:{date,dishes:[...dishes],locked:false,pos
   const page = await browser.newPage({viewport:{width:1440,height:1100},colorScheme:'light',reducedMotion:'reduce'});
   const stores = new Map();
   let failOrder = false, failState = false, delayState = 0, lastRating = null;
-  // Two colleagues already loved the fried chicken on an earlier day, so it starts out recommended.
-  const ratingRows = [{userId:'x1',date:'2026-01-02',dish:'Gà ta chiên nước mắm',stars:5},{userId:'x2',date:'2026-01-02',dish:'Gà ta chiên nước mắm',stars:5}];
-  const ratingStats = () => {
+  // Two colleagues already loved the fried chicken, so it starts out recommended.
+  const ratingRows = [{userId:'x1',dish:'Gà ta chiên nước mắm',stars:5},{userId:'x2',dish:'Gà ta chiên nước mắm',stars:5}];
+  const ratingBoard = user => {
     const groups = new Map();
+    for (const st of stores.values()) (st.menu?.dishes || []).forEach(d => { if (!groups.has(d.toLowerCase())) groups.set(d.toLowerCase(),{key:d.toLowerCase(),dish:d,sum:0,count:0}); });
     ratingRows.forEach(r => { const key = r.dish.toLowerCase(), g = groups.get(key) || {key,dish:r.dish,sum:0,count:0}; g.sum += r.stars; g.count += 1; groups.set(key,g); });
-    return [...groups.values()].map(g => ({key:g.key,dish:g.dish,avg:g.sum/g.count,count:g.count,score:g.sum/g.count,recommended:g.count >= 2 && g.sum/g.count >= 4})).sort((a,b) => b.score-a.score);
+    const dishes = [...groups.values()].map(g => ({key:g.key,dish:g.dish,served:1,lastDate:null,avg:g.count ? g.sum/g.count : 0,count:g.count,score:g.count ? g.sum/g.count : null,recommended:g.count >= 2 && g.sum/g.count >= 4})).sort((a,b) => (b.score ?? -1)-(a.score ?? -1));
+    return {dishes,mine:ratingRows.filter(r => r.userId === user).map(r => ({key:r.dish.toLowerCase(),dish:r.dish,stars:r.stars}))};
   };
   const stateFor = date => { if (!stores.has(date)) stores.set(date, fixture(date)); return stores.get(date); };
   await page.routeWebSocket('**', socket => { socket.onMessage(() => {}); });
@@ -33,10 +35,10 @@ const fixture = (date) => ({date, menu:{date,dishes:[...dishes],locked:false,pos
       return route.fulfill({json:stateFor(url.searchParams.get('date'))});
     }
     if (url.pathname === '/api/health') return route.fulfill({json:{ok:true}});
-    if (url.pathname === '/api/ratings') { const d = url.searchParams.get('date'); return route.fulfill({json:{date:d,stats:ratingStats(),day:ratingRows.filter(r => r.date === d).map(({userId,dish,stars}) => ({userId,dish,stars}))}}); }
+    if (url.pathname === '/api/ratings') return route.fulfill({json:ratingBoard(url.searchParams.get('user'))});
     if (url.pathname === '/api/rating') {
       lastRating = request.postDataJSON();
-      const i = ratingRows.findIndex(r => r.userId === lastRating.userId && r.date === lastRating.date && r.dish === lastRating.dish);
+      const i = ratingRows.findIndex(r => r.userId === lastRating.userId && r.dish.toLowerCase() === lastRating.dish.toLowerCase());
       if (i >= 0) ratingRows.splice(i,1);
       if (lastRating.stars) ratingRows.push(lastRating);
       return route.fulfill({json:{success:true}});
@@ -93,8 +95,16 @@ const fixture = (date) => ({date, menu:{date,dishes:[...dishes],locked:false,pos
     await page.locator('#myOrderTicket .star-btn[data-star="4"]').first().click();
     await page.waitForFunction(() => document.querySelectorAll('#myOrderTicket .star-btn.on').length === 4);
     assert.deepEqual([lastRating.dish,lastRating.stars],['Sườn heo sốt chua ngọt',4]);
-    await page.locator('#tabMenuBtn').click(); await waitFor('#topDishList li',1); // a single 4-star vote isn't a recommendation yet
+    await page.locator('#tabRatingsBtn').click(); await waitFor('#topDishList li',1); // a single 4-star vote isn't a recommendation yet
     assert.match(await page.locator('#topDishList li').first().textContent(),/Gà ta chiên nước mắm/);
+    await waitFor('#ratingList .rating-row',6);
+    await page.locator('#ratingList .star-btn[data-dish="Cá basa kho tộ"][data-star="5"]').click(); // not ordered, still votable
+    await page.waitForFunction(() => document.querySelectorAll('#ratingList .star-btn[data-dish="Cá basa kho tộ"].on').length === 5);
+    assert.deepEqual([lastRating.dish,lastRating.stars,'date' in lastRating],['Cá basa kho tộ',5,false]);
+    await page.locator('[data-rating-filter="unrated"]').click(); await waitFor('#ratingList .rating-row',4);
+    await page.locator('#ratingSearchInput').fill('gà ta'); await waitFor('#ratingList .rating-row',1);
+    await page.locator('#ratingSearchInput').fill('zz'); assert.equal(await page.locator('#ratingEmpty').isVisible(),true);
+    await page.locator('#ratingSearchInput').fill(''); await page.locator('[data-rating-filter="all"]').click(); await waitFor('#ratingList .rating-row',6);
     await page.locator('#tabOrderBtn').click();
     await page.locator('#myOrderTicket .star-btn[data-star="4"]').first().click(); // same star again clears it
     await page.waitForFunction(() => document.querySelectorAll('#myOrderTicket .star-btn.on').length === 0);
@@ -140,7 +150,7 @@ const fixture = (date) => ({date, menu:{date,dishes:[...dishes],locked:false,pos
     for (const width of [320,375,390,768,1024]) {
       await page.setViewportSize({width,height:900}); await noOverflow();
       if (width === 390) await page.locator('#toast').evaluate(el => { el.hidden = true; }); await page.screenshot({path:'artifacts/mobile-light.png',fullPage:true});
-      for (const id of ['tabMenuBtn','tabOrdersListBtn','tabOrderBtn']) { await page.locator('#'+id).click(); await noOverflow(); }
+      for (const id of ['tabMenuBtn','tabOrdersListBtn','tabRatingsBtn','tabOrderBtn']) { await page.locator('#'+id).click(); await noOverflow(); }
     }
     await page.setViewportSize({width:390,height:844}); await page.locator('#themeToggleBtn').click();
     await page.locator('#toast').evaluate(el => { el.hidden = true; }); await page.screenshot({path:'artifacts/mobile-dark.png',fullPage:true});
@@ -161,7 +171,7 @@ const fixture = (date) => ({date, menu:{date,dishes:[...dishes],locked:false,pos
     await page.emulateMedia({colorScheme:'dark'}); await page.reload(); await waitFor('#dishChips .dish-choice-card',6);
     assert.equal(await page.locator('html').getAttribute('data-theme'),'dark','Default theme follows the system');
     assert.equal(errors.length,0,errors.join('\n'));
-    console.log('PASS: choose dishes, validation, notes, submit failure/retry, save/edit/delete, proxy orders, locks, menu editing, star ratings and recommendations, keyboard tabs, modal, light/dark, 320-1440px, loading, empty and offline/retry states.');
+    console.log('PASS: choose dishes, validation, notes, submit failure/retry, save/edit/delete, proxy orders, locks, menu editing, star ratings tab and recommendations, keyboard tabs, modal, light/dark, 320-1440px, loading, empty and offline/retry states.');
     console.log('Screenshots: artifacts/desktop-{light,dark}.png and artifacts/mobile-{light,dark}.png');
   } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -20,12 +20,16 @@ The hero photograph is decorative and stays the same when the daily menu changes
 
 ## Dish ratings
 
-After lunch, each person rates the dishes in their own order (1-5 stars, tap the same star to clear).
-Dishes are matched across days by normalized name, since the menu is retyped daily. A dish is
-"được đề cử" once at least two people rated it and its score, pulled toward the overall mean
-with a weight of two votes, is 4 or higher. Recommended dishes get an amber star on the order
-chips, a one-line "Đề cử hôm nay" under the menu heading, and the "Món được đề cử" card on the
-Thực đơn tab. Ratings use `/api/ratings` and `/api/rating`, separate from the 3.5s state poll.
+The "Đánh giá" tab lists every dish that has ever been on a menu, matched across days by
+normalized name since the menu is retyped daily. Anyone can vote without ordering: one vote
+per person per dish (1-5 stars, tap the same star to withdraw), and voting again replaces the
+old vote. The "Đơn của bạn" card offers the same stars for the dishes just ordered.
+
+A dish is "được đề cử" once at least two people rated it and its score, pulled toward the
+overall mean with a weight of two votes, is 4 or higher. Recommended dishes get an amber star
+on the order chips, a one-line "Đề cử hôm nay" under the menu heading, a tag in the Đánh giá
+list and a place in its "Món được đề cử" card (top 10, top 5 on phones). Ratings use
+`/api/ratings` and `/api/rating`, separate from the 3.5s state poll.
 
 ## Tokens
 
