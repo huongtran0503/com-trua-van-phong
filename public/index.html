@@ -55,14 +55,17 @@
     <span id="countLabel" hidden></span>
     <button type="button" id="editMenuBtn" hidden></button>
     <div class="view-panel active" id="viewOrder" role="tabpanel" aria-labelledby="tabOrderBtn">
-      <section class="lunch-hero" aria-labelledby="formTitle">
-        <div class="hero-copy">
-          <p class="hero-greeting" id="heroGreeting" hidden></p>
-          <h1 id="formTitle">Hôm nay bạn<br>muốn ăn gì?</h1>
-          <button type="button" class="hero-link" id="viewFullMenuBtn">Xem thực đơn <i class="ph ph-arrow-up-right" aria-hidden="true"></i></button>
-        </div>
-        <div class="hero-photo"><img src="/assets/lunch-hero.webp" srcset="/assets/lunch-hero-small.webp 768w, /assets/lunch-hero.webp 1100w" sizes="(max-width: 420px) calc(100vw - 32px), (max-width: 767px) 50vw, 640px" alt="Bữa trưa minh họa với cơm sườn, rau tươi và canh" width="1100" height="520" fetchpriority="high"></div>
-      </section>
+      <div class="order-aside">
+        <section class="lunch-hero" aria-labelledby="formTitle">
+          <div class="hero-copy">
+            <p class="hero-greeting" id="heroGreeting" hidden></p>
+            <h1 id="formTitle">Hôm nay bạn<br>muốn ăn gì?</h1>
+            <button type="button" class="hero-link" id="viewFullMenuBtn">Xem thực đơn <i class="ph ph-arrow-up-right" aria-hidden="true"></i></button>
+          </div>
+          <div class="hero-photo"><img src="/assets/lunch-hero.webp" srcset="/assets/lunch-hero-small.webp 768w, /assets/lunch-hero.webp 1100w" sizes="(max-width: 420px) calc(100vw - 32px), (max-width: 767px) 50vw, 640px" alt="Bữa trưa minh họa với cơm sườn, rau tươi và canh" width="1100" height="520" fetchpriority="high"></div>
+        </section>
+        <section class="my-order-card" id="myOrderSummaryCard" aria-labelledby="myOrderTitle" hidden><div class="my-order-heading"><i class="ph ph-receipt" aria-hidden="true"></i><h2 id="myOrderTitle">Đơn của bạn hôm nay</h2></div><div id="myOrderContent"><div id="hasMyOrderBox"><div class="my-order-details" id="myOrderTicket"></div><div class="my-order-actions"><button type="button" class="btn-sm btn-subtle" id="editMyOrderBtn">Sửa đơn</button><button type="button" class="btn-sm btn-danger-subtle" id="deleteMyOrderBtn">Hủy đơn</button><button type="button" class="text-link-btn" id="viewAllOrdersBtn">Xem mọi người đã đặt <i class="ph ph-arrow-right" aria-hidden="true"></i></button></div></div></div></section>
+      </div>
       <div id="lockNotice" class="warning-banner" hidden><span><i class="ph ph-lock-simple" aria-hidden="true"></i> Đơn ngày này đã chốt sổ.</span><button type="button" class="btn-sm btn-subtle" id="unlockBtn">Mở lại nhận đơn</button></div>
       <div id="orderPanel">
         <div id="orderForm" class="order-layout">
@@ -84,7 +87,6 @@
           <div class="order-action-bar"><div class="selection-summary"><span>Bữa trưa của bạn</span><span id="pickCount" aria-live="polite">Chưa chọn món</span></div><p id="selectedDishNames"></p><p class="field-error" id="submitError" role="alert" hidden></p><button type="button" class="btn-subtle cancel-edit" id="cancelEditBtn" hidden>Hủy sửa</button><button type="button" class="btn-order-primary" id="submitBtn">Đặt cơm ngay <i class="ph ph-arrow-right" aria-hidden="true"></i></button></div>
         </div>
       </div>
-      <section class="my-order-card" id="myOrderSummaryCard" aria-labelledby="myOrderTitle" hidden><div class="my-order-heading"><i class="ph ph-receipt" aria-hidden="true"></i><h2 id="myOrderTitle">Đơn của bạn hôm nay</h2></div><div id="myOrderContent"><div id="hasMyOrderBox"><div class="my-order-details" id="myOrderTicket"></div><div class="my-order-actions"><button type="button" class="btn-sm btn-subtle" id="editMyOrderBtn">Sửa đơn</button><button type="button" class="btn-sm btn-danger-subtle" id="deleteMyOrderBtn">Hủy đơn</button><button type="button" class="text-link-btn" id="viewAllOrdersBtn">Xem danh sách tất cả <i class="ph ph-arrow-right" aria-hidden="true"></i></button></div></div></div></section>
     </div>
     <div class="view-panel" id="viewMenu" role="tabpanel" aria-labelledby="tabMenuBtn" hidden>
       <div class="menu-hero-banner"><div><h1 class="view-title">Thực đơn</h1><h2 class="menu-hero-date" id="menuCoverDate"></h2><div class="menu-hero-meta"><span id="menuCoverPoster"></span><span id="menuCoverDishCount"></span><span id="menuCoverStatus" class="status-pill-green">Đang nhận đơn</span></div></div><div class="menu-hero-actions"><button type="button" class="btn-solid" id="toggleEditMenuTabBtn"><i class="ph ph-pencil-simple" aria-hidden="true"></i> <span id="editMenuLabel">Sửa thực đơn</span></button><button type="button" class="btn-subtle" id="quickPrevMenuTabBtn"><i class="ph ph-copy" aria-hidden="true"></i> Lấy thực đơn hôm trước</button></div></div>
@@ -92,7 +94,7 @@
       <div class="menu-dishes-list" id="menuDishesGrid"></div>
     </div>
     <div class="view-panel" id="viewOrdersList" role="tabpanel" aria-labelledby="tabOrdersListBtn" hidden>
-      <div class="orders-layout-grid"><section class="orders-main-col"><div class="col-header-bar"><h1 class="view-title">Danh sách đơn đã đặt</h1><label class="search-field"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="search" id="orderSearchInput" class="search-input-pill" placeholder="Tìm theo tên hoặc món…" aria-label="Tìm đơn theo tên hoặc món ăn"></label></div><div class="orders-list-wrap"><ol class="orders-clean-list" id="orderList"></ol><div class="empty-state-clean" id="orderEmpty"><i class="ph ph-receipt" aria-hidden="true"></i><h2 id="orderEmptyTitle">Chưa có ai đặt cơm</h2></div></div></section><aside class="orders-side-col" aria-label="Tổng hợp đơn đặt"><section class="clean-card"><div class="card-header-clean"><h2 class="card-title-sm">Tổng hợp món gửi quán</h2><button type="button" class="btn-sm btn-subtle" id="copyTallyBtn"><i class="ph ph-copy" aria-hidden="true"></i> Copy</button></div><div id="tallyContainer"><div id="tallyCards" class="tally-chips-wrap"></div></div></section><section class="clean-card"><div class="card-header-clean"><label class="card-title-sm" for="msgBox">Tin nhắn gửi nhóm chat</label></div><textarea id="msgBox" class="clean-textarea" readonly rows="7"></textarea><button type="button" class="btn-solid-sm" id="copyMsgBtn"><i class="ph ph-copy" aria-hidden="true"></i> Copy tin nhắn</button><div class="lock-bar"><span id="lockHint" class="lock-hint-text"></span><button type="button" id="lockBtn" class="btn-sm btn-subtle">Chốt đơn</button></div></section></aside></div>
+      <div class="orders-layout-grid"><section class="orders-main-col"><div class="col-header-bar"><h1 class="view-title">Danh sách đơn đã đặt</h1><label class="search-field"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><input type="search" id="orderSearchInput" class="search-input-pill" placeholder="Tìm theo tên hoặc món…" aria-label="Tìm đơn theo tên hoặc món ăn"></label></div><div class="orders-list-wrap"><ol class="orders-clean-list" id="orderList"></ol><div class="empty-state-clean" id="orderEmpty"><i class="ph ph-receipt" aria-hidden="true"></i><h2 id="orderEmptyTitle">Chưa có ai đặt cơm</h2></div></div></section><aside class="orders-side-col" aria-label="Tin nhắn gửi nhóm chat"><section class="clean-card"><div class="card-header-clean"><label class="card-title-sm" for="msgBox">Tin nhắn gửi nhóm chat</label></div><textarea id="msgBox" class="clean-textarea" readonly rows="14"></textarea><button type="button" class="btn-solid-sm" id="copyMsgBtn"><i class="ph ph-copy" aria-hidden="true"></i> Copy tin nhắn</button><div class="lock-bar"><span id="lockHint" class="lock-hint-text"></span><button type="button" id="lockBtn" class="btn-sm btn-subtle">Chốt đơn</button></div></section></aside></div>
     </div>
   </main>
 </div>
