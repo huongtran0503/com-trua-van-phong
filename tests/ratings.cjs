@@ -14,41 +14,53 @@ const app = require('../api/index');
   await new Promise(resolve => server.once('listening', resolve));
   const base = 'http://127.0.0.1:' + server.address().port;
   const post = (url, body) => fetch(base + url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  const ratings = async (date) => (await fetch(`${base}/api/ratings?date=${date}`)).json();
-  const date = '2026-01-05', dish = 'Tôm rang lá chanh';
+  const board = async (user = '') => (await fetch(`${base}/api/ratings?user=${encodeURIComponent(user)}`)).json();
+  const entry = (data, key) => data.dishes.find(d => d.key === key);
+  const dish = 'Tôm rang lá chanh', key = 'tôm rang lá chanh';
   try {
-    await post('/api/order', { date, name: 'An', dishes: [dish, 'Lạc rang'], forUser: 'u1', createdBy: 'u1' });
-    await post('/api/order', { date, name: 'Bình', dishes: [dish], forUser: 'u2', createdBy: 'u2' });
-    await post('/api/order', { date, name: 'Chi', dishes: ['Lạc rang'], createdBy: 'u3' });
+    // Two menus a week apart; the second one spells the dish with extra spaces.
+    await post('/api/menu', { date: '2026-01-05', dishes: [dish, 'Lạc rang'] });
+    await post('/api/menu', { date: '2026-01-12', dishes: ['  Tôm rang  lá chanh', 'Cá basa kho tộ'] });
 
-    assert.equal((await post('/api/rating', { userId: 'u1', date, dish, stars: 5 })).status, 200);
-    let data = await ratings(date);
-    let stat = data.stats.find(s => s.dish === dish);
-    assert.deepEqual([stat.avg, stat.count, stat.recommended], [5, 1, false], 'one vote is never recommended');
-    assert.deepEqual(data.day, [{ userId: 'u1', dish, stars: 5 }]);
+    let data = await board();
+    let tom = entry(data, key);
+    assert.deepEqual([tom.served, tom.lastDate, tom.count], [2, '2026-01-12', 0], 'dishes are unique across menus');
+    assert.ok(entry(data, 'lạc rang') && entry(data, 'cá basa kho tộ'), 'unrated dishes are listed too');
 
-    // Re-rating replaces, and names match after whitespace/case normalization.
-    assert.equal((await post('/api/rating', { userId: 'u1', date, dish: '  tôm rang   lá chanh ', stars: 4 })).status, 200);
-    assert.equal((await post('/api/rating', { userId: 'u2', date, dish, stars: 5 })).status, 200);
-    stat = (await ratings(date)).stats.find(s => s.key === 'tôm rang lá chanh');
-    assert.deepEqual([stat.avg, stat.count, stat.recommended], [4.5, 2, true]);
+    // No order needed to vote.
+    assert.equal((await post('/api/rating', { userId: 'u1', dish, stars: 5 })).status, 200);
+    data = await board('u1');
+    tom = entry(data, key);
+    assert.deepEqual([tom.avg, tom.count, tom.recommended], [5, 1, false], 'one vote is never recommended');
+    assert.deepEqual(data.mine, [{ key, dish: tom.dish, stars: 5 }]);
+    assert.equal(data.dishes[0].key, key, 'rated dishes come first');
 
-    // Ordered without forUser (ordered for themselves under their own id) still counts as their order.
-    assert.equal((await post('/api/rating', { userId: 'u3', date, dish: 'Lạc rang', stars: 2 })).status, 200);
-    data = await ratings(date);
-    assert.equal(data.stats[0].dish, dish, 'best score first');
+    // One vote per person per dish: re-voting (any spelling) replaces it instead of adding.
+    assert.equal((await post('/api/rating', { userId: 'u1', dish: ' tôm RANG lá chanh ', stars: 4 })).status, 200);
+    assert.equal((await post('/api/rating', { userId: 'u2', dish, stars: 5 })).status, 200);
+    tom = entry(await board(), key);
+    assert.deepEqual([tom.avg, tom.count, tom.recommended], [4.5, 2, true]);
 
-    assert.equal((await post('/api/rating', { userId: 'u2', date, dish: 'Lạc rang', stars: 5 })).status, 403, 'only own dishes');
-    assert.equal((await post('/api/rating', { userId: 'u9', date, dish, stars: 5 })).status, 403, 'no order, no rating');
-    assert.equal((await post('/api/rating', { userId: 'u1', date, dish, stars: 6 })).status, 400);
-    assert.equal((await post('/api/rating', { userId: 'u1', date, dish, stars: 4.5 })).status, 400);
-    assert.equal((await post('/api/rating', { userId: 'u1', date: '2999-01-01', dish, stars: 5 })).status, 400, 'no rating the future');
+    assert.equal((await post('/api/rating', { userId: 'u3', dish: 'Lạc rang', stars: 2 })).status, 200);
+    assert.equal((await board()).dishes[0].key, key, 'best score first');
 
-    // 0 clears a rating.
-    assert.equal((await post('/api/rating', { userId: 'u3', date, dish: 'Lạc rang', stars: 0 })).status, 200);
-    data = await ratings(date);
-    assert.equal(data.stats.some(s => s.dish === 'Lạc rang'), false);
-    assert.equal(data.day.length, 2);
+    assert.equal((await post('/api/rating', { userId: 'u1', dish: 'Phở bò', stars: 5 })).status, 404, 'only dishes that were on a menu');
+    assert.equal((await post('/api/rating', { userId: 'u1', dish, stars: 6 })).status, 400);
+    assert.equal((await post('/api/rating', { userId: 'u1', dish, stars: 4.5 })).status, 400);
+    assert.equal((await post('/api/rating', { dish, stars: 4 })).status, 400);
+
+    // 0 withdraws a vote.
+    assert.equal((await post('/api/rating', { userId: 'u3', dish: 'Lạc rang', stars: 0 })).status, 200);
+    assert.equal(entry(await board(), 'lạc rang').count, 0);
+    assert.deepEqual((await board('u3')).mine, []);
+
+    // Rows from the first release (one per person per day) count once: the latest vote wins.
+    const legacy = db.latestVotes([
+      { userId: 'u1', key: 'k', stars: 2, updatedAt: 1 },
+      { userId: 'u1', key: 'k', stars: 5, updatedAt: 3 },
+      { userId: 'u2', key: 'k', stars: 4, updatedAt: 2 }
+    ]);
+    assert.deepEqual(legacy.map(r => [r.userId, r.stars]).sort(), [['u1', 5], ['u2', 4]]);
 
     // A lone 5-star doesn't outrank a dish many people rated 4.6.
     const ranked = db.summarizeRatings([
@@ -61,5 +73,5 @@ const app = require('../api/index');
     server.close();
     fs.writeFileSync = realWrite;
   }
-  console.log('PASS: rate own dishes, re-rate/clear, name normalization, validation, recommended needs 2+ votes, shrunk ranking.');
+  console.log('PASS: vote without ordering, one vote per person per dish, unique dishes across menus, legacy per-day rows count once, validation, recommended needs 2+ votes, shrunk ranking.');
 })().catch(err => { console.error(err); process.exit(1); });

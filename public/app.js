@@ -25,9 +25,11 @@
   let ws = null;
   let wsConnected = false;
   let loadFailed = false;
-  let ratingStats = new Map(); // dishKey -> { dish, avg, count, score, recommended }, all-time
-  let topDishes = [];          // same stats, best first
-  let dayRatings = [];         // [{ userId, dish, stars }] for the viewed date
+  let allDishes = [];          // every dish ever served: { key, dish, served, lastDate, avg, count, score, recommended }
+  let ratingStats = new Map(); // dishKey -> entry above, rated dishes only
+  let myRatings = new Map();   // dishKey -> my stars (one vote per dish)
+  let ratingQuery = "";
+  let ratingFilter = "all";    // all | menu | unrated
 
   // ---------- Helpers ----------
   function todayVN() {
@@ -53,7 +55,8 @@
   const dishKey = (name) => String(name || "").normalize("NFC").trim().replace(/\s+/g, " ").toLowerCase();
   const fmtAvg = (n) => Number(n).toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const ratingSummary = (stat) => `${fmtAvg(stat.avg)} sao · ${stat.count} lượt chấm${stat.recommended ? " · Được đề cử" : ""}`;
-  const myRating = (dish) => dayRatings.find(r => r.userId === myId && dishKey(r.dish) === dishKey(dish))?.stars || 0;
+  const myRating = (dish) => myRatings.get(dishKey(dish)) || 0;
+  const onMenuLabel = () => date === todayVN() ? "Có hôm nay" : "Có ngày " + prettyDate(date).split(" ").pop();
 
   const myName = () => (myId && people.get(myId) && people.get(myId).name) || localStorage.getItem("com_trua_user_name") || "";
   const displayName = (o) => (o.forUser && people.get(o.forUser) && people.get(o.forUser).name) || o.name;
@@ -188,7 +191,7 @@
       if (!wsConnected && !document.hidden && !busy) {
         fetchDateState(date, true);
         // Ratings change slowly; refresh them about once a minute instead of every tick.
-        if (++ticks % 18 === 0) fetchRatings(date);
+        if (++ticks % 18 === 0) fetchRatings();
       }
     }, 3500);
   }
@@ -233,7 +236,7 @@
         fetchDateState(date, true);
       }
     } else if (msg.type === "RATING_UPDATED") {
-      fetchRatings(date);
+      fetchRatings();
     } else if (msg.type === "PEOPLE_UPDATED") {
       if (msg.data && msg.data.person) {
         people.set(msg.data.person.id, msg.data.person);
@@ -275,21 +278,20 @@
   }
 
   // Ratings live outside /api/state so the 3.5s poll doesn't aggregate them every time.
-  async function fetchRatings(d) {
+  async function fetchRatings() {
     try {
-      const res = await fetch(`/api/ratings?date=${d}&_t=${Date.now()}`);
+      const res = await fetch(`/api/ratings?user=${encodeURIComponent(myId)}&_t=${Date.now()}`);
       if (!res.ok) return;
       const data = await res.json();
-      if (d !== date) return;
       applyRatings(data);
-      try { localStorage.setItem("com_trua_ratings_v1", JSON.stringify({ stats: topDishes })); } catch {}
+      try { localStorage.setItem("com_trua_ratings_v2", JSON.stringify({ dishes: allDishes, mine: [...myRatings] })); } catch {}
     } catch {}
   }
 
   function applyRatings(data) {
-    topDishes = Array.isArray(data.stats) ? data.stats : [];
-    ratingStats = new Map(topDishes.map(s => [s.key, s]));
-    if (Array.isArray(data.day)) dayRatings = data.day;
+    allDishes = Array.isArray(data.dishes) ? data.dishes : [];
+    ratingStats = new Map(allDishes.filter(d => d.count).map(d => [d.key, d]));
+    if (Array.isArray(data.mine)) myRatings = new Map(data.mine.map(r => Array.isArray(r) ? r : [r.key || dishKey(r.dish), r.stars]));
     render();
   }
 
@@ -325,7 +327,8 @@
     const tabs = [
       { id: "order", btn: $("tabOrderBtn"), view: $("viewOrder") },
       { id: "menu", btn: $("tabMenuBtn"), view: $("viewMenu") },
-      { id: "ordersList", btn: $("tabOrdersListBtn"), view: $("viewOrdersList") }
+      { id: "ordersList", btn: $("tabOrdersListBtn"), view: $("viewOrdersList") },
+      { id: "ratings", btn: $("tabRatingsBtn"), view: $("viewRatings") }
     ];
 
     tabs.forEach(item => {
@@ -346,6 +349,8 @@
     } else if (t === "ordersList") {
       renderList();
       renderMessage();
+    } else if (t === "ratings") {
+      renderRatingsTab();
     }
   }
 
@@ -411,6 +416,7 @@
     renderMyOrderSummary();
     renderTeamOrders();
     renderMenuTab();
+    if (currentTab === "ratings") renderRatingsTab();
     renderList();
     renderMessage();
   }
@@ -423,14 +429,12 @@
     ticket.replaceChildren();
     if (!order) return;
     const name = document.createElement("strong"); name.textContent = displayName(order);
-    // Rating needs a date that has happened; today counts so people can rate right after lunch.
-    const canRate = date <= todayVN();
     const list = document.createElement("ul"); list.className = "my-order-dishes";
     (order.dishes || []).forEach(dish => {
       const li = document.createElement("li");
       const label = document.createElement("span"); label.className = "my-order-dish"; label.textContent = dish;
       li.append(label);
-      if (canRate) li.append(starInput(dish));
+      li.append(starInput(dish));
       list.append(li);
     });
     ticket.append(name, list);
@@ -439,7 +443,7 @@
     const meta = [];
     if (order.createdAt) meta.push("Đặt lúc " + new Date(order.createdAt).toLocaleTimeString("vi-VN", { timeZone: TZ, hour: "2-digit", minute: "2-digit" }));
     const rated = (order.dishes || []).filter(d => myRating(d)).length;
-    if (canRate) meta.push(rated ? `Đã chấm ${rated}/${order.dishes.length} món` : "Ăn xong nhớ chấm sao để gợi ý món ngon cho mọi người");
+    meta.push(rated ? `Đã chấm ${rated}/${order.dishes.length} món` : "Ăn xong nhớ chấm sao để gợi ý món ngon cho mọi người");
     const time = document.createElement("p"); time.className = "helper-text"; time.textContent = meta.join(" · ");
     ticket.append(time);
     if (focus?.star) ticket.querySelector(`.star-btn[data-dish="${CSS.escape(focus.dish)}"][data-star="${focus.star}"]`)?.focus({ preventScroll: true });
@@ -464,16 +468,16 @@
   }
 
   async function rateDish(dish, stars) {
-    const requestDate = date, key = dishKey(dish), before = dayRatings;
-    dayRatings = [...dayRatings.filter(r => !(r.userId === myId && dishKey(r.dish) === key)), ...(stars ? [{ userId: myId, dish, stars }] : [])];
-    renderMyOrderSummary();
+    const key = dishKey(dish), before = new Map(myRatings);
+    if (stars) myRatings.set(key, stars); else myRatings.delete(key);
+    renderMyOrderSummary(); if (currentTab === "ratings") renderRatingsTab();
     try {
-      const res = await fetch("/api/rating", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: myId, date: requestDate, dish, stars }) });
+      const res = await fetch("/api/rating", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: myId, dish, stars }) });
       if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || "Chưa lưu được đánh giá."); }
       toast(stars ? `Đã chấm ${dish} ${stars} sao` : `Đã bỏ chấm ${dish}`);
-      fetchRatings(requestDate);
+      fetchRatings();
     } catch (err) {
-      if (requestDate === date) { dayRatings = before; renderMyOrderSummary(); }
+      myRatings = before; renderMyOrderSummary(); if (currentTab === "ratings") renderRatingsTab();
       toast(err instanceof TypeError ? "Chưa lưu được đánh giá. Kiểm tra kết nối rồi thử lại." : err.message);
     }
   }
@@ -491,7 +495,7 @@
   }
 
   function renderTopDishes() {
-    const top = topDishes.filter(stat => stat.recommended).slice(0, 10);
+    const top = allDishes.filter(stat => stat.recommended).slice(0, 10);
     const onMenu = new Set((menu?.dishes || []).map(dishKey));
     $("topDishEmpty").hidden = top.length > 0;
     $("topDishList").replaceChildren(...top.map((stat, i) => {
@@ -500,13 +504,44 @@
       const info = document.createElement("div"); info.className = "top-dish-info";
       const name = document.createElement("span"); name.className = "top-dish-name"; name.textContent = stat.dish;
       const meta = document.createElement("span"); meta.className = "top-dish-meta";
-      meta.textContent = stat.count + " lượt chấm" + (onMenu.has(stat.key) ? " · Có hôm nay" : "");
+      meta.textContent = stat.count + " lượt chấm" + (onMenu.has(stat.key) ? " · " + onMenuLabel() : "");
       info.append(name, meta);
       const score = document.createElement("span"); score.className = "top-dish-score";
       score.append(starIcon(), document.createTextNode(fmtAvg(stat.avg)));
       score.setAttribute("aria-label", ratingSummary(stat));
       li.append(rank, info, score); return li;
     }));
+  }
+
+  // Ratings tab: every dish ever served, anyone can vote, one vote per person per dish.
+  function renderRatingsTab() {
+    renderTopDishes();
+    $("ratingMenuFilter").textContent = onMenuLabel();
+    document.querySelectorAll("[data-rating-filter]").forEach(btn => btn.setAttribute("aria-pressed", String(btn.dataset.ratingFilter === ratingFilter)));
+    const onMenu = new Set((menu?.dishes || []).map(dishKey));
+    const q = dishKey(ratingQuery);
+    const shown = allDishes.filter(d =>
+      (!q || d.key.includes(q)) &&
+      (ratingFilter !== "menu" || onMenu.has(d.key)) &&
+      (ratingFilter !== "unrated" || !myRatings.has(d.key)));
+    const list = $("ratingList");
+    const focus = list.contains(document.activeElement) ? { ...document.activeElement.dataset } : null;
+    $("ratingEmpty").hidden = shown.length > 0;
+    $("ratingEmptyTitle").textContent = !allDishes.length ? "Chưa có món nào" : "Không có món phù hợp";
+    $("ratingEmptyText").textContent = !allDishes.length ? "Món sẽ xuất hiện ở đây sau khi có thực đơn." : ratingFilter === "unrated" && !q ? "Bạn đã chấm hết các món rồi." : "Thử bỏ bộ lọc hoặc tìm tên khác.";
+    list.replaceChildren(...shown.map(d => {
+      const li = document.createElement("li"); li.className = "rating-row";
+      const info = document.createElement("div"); info.className = "rating-row-info";
+      const name = document.createElement("span"); name.className = "rating-row-name"; name.textContent = d.dish;
+      if (d.recommended) { const tag = document.createElement("span"); tag.className = "rating-tag"; tag.textContent = "Đề cử"; name.append(" ", tag); }
+      const meta = document.createElement("span"); meta.className = "rating-row-meta" + (d.recommended ? " recommended" : "");
+      const facts = [d.count ? `${fmtAvg(d.avg)} · ${d.count} lượt chấm` : "Chưa ai chấm", onMenu.has(d.key) && onMenuLabel(), d.served && `Lên thực đơn ${d.served} lần`].filter(Boolean);
+      if (d.count) meta.append(starIcon());
+      meta.append(document.createTextNode(facts.join(" · ")));
+      info.append(name, meta);
+      li.append(info, starInput(d.dish)); return li;
+    }));
+    if (focus?.star) list.querySelector(`.star-btn[data-dish="${CSS.escape(focus.dish)}"][data-star="${focus.star}"]`)?.focus({ preventScroll: true });
   }
 
   function renderMenuTab() {
@@ -517,7 +552,6 @@
     $("editMenuLabel").textContent = dishes.length ? "Sửa thực đơn" : "Thêm thực đơn";
     $("menuCoverStatus").textContent = !dishes.length ? "Chưa có thực đơn" : locked ? "Đã chốt nhận đơn" : "Đang nhận đơn";
     $("menuCoverStatus").className = "status-pill-green" + (locked ? " locked" : "");
-    renderTopDishes();
     const grid = $("menuDishesGrid"); grid.replaceChildren();
     if (!dishes.length) { grid.append(emptyState("Chưa có thực đơn cho ngày này", "Bấm Thêm thực đơn hoặc lấy thực đơn hôm trước.", "book-open")); return; }
     dishes.forEach(dish => {
@@ -1002,11 +1036,9 @@
       date = d;
       menu = null; orders = []; menuLoaded = false; loadFailed = false;
       editingMenu = false;
-      dayRatings = [];
       resetForm();
       render();
       fetchDateState(date);
-      fetchRatings(date);
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: "SUBSCRIBE_DATE", date }));
       }
@@ -1020,6 +1052,9 @@
   $("todayBtn").addEventListener("click", () => gotoDate(todayVN()));
 
   // Search in orders
+  $("ratingSearchInput").addEventListener("input", (e) => { ratingQuery = e.target.value; renderRatingsTab(); });
+  document.querySelectorAll("[data-rating-filter]").forEach(btn => btn.addEventListener("click", () => { ratingFilter = btn.dataset.ratingFilter; renderRatingsTab(); }));
+
   $("orderSearchInput").addEventListener("input", (e) => {
     searchQuery = e.target.value.trim();
     renderList();
@@ -1076,7 +1111,7 @@
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden && !wsConnected) {
       fetchDateState(date, true);
-      fetchRatings(date);
+      fetchRatings();
     }
   });
 
@@ -1084,6 +1119,7 @@
   if ($("tabOrderBtn")) $("tabOrderBtn").addEventListener("click", () => switchTab("order"));
   if ($("tabMenuBtn")) $("tabMenuBtn").addEventListener("click", () => switchTab("menu"));
   if ($("tabOrdersListBtn")) $("tabOrdersListBtn").addEventListener("click", () => switchTab("ordersList"));
+  $("tabRatingsBtn").addEventListener("click", () => switchTab("ratings"));
   if ($("viewFullMenuBtn")) $("viewFullMenuBtn").addEventListener("click", () => switchTab("menu"));
   if ($("viewAllOrdersBtn")) $("viewAllOrdersBtn").addEventListener("click", () => switchTab("ordersList"));
 
@@ -1135,11 +1171,12 @@
 
   // ---------- Init ----------
   // Roving focus for the tablist; preserve native button keyboard behavior.
-  const tabKeys = ["order", "menu", "ordersList"];
-  const tabButtons = ["tabOrderBtn", "tabMenuBtn", "tabOrdersListBtn"];
+  const tabKeys = ["order", "menu", "ordersList", "ratings"];
+  const tabButtons = ["tabOrderBtn", "tabMenuBtn", "tabOrdersListBtn", "tabRatingsBtn"];
   document.querySelector(".segment-tabs").addEventListener("keydown", e => {
     const index = tabKeys.indexOf(currentTab);
-    const next = e.key === "ArrowRight" ? (index + 1) % 3 : e.key === "ArrowLeft" ? (index + 2) % 3 : e.key === "Home" ? 0 : e.key === "End" ? 2 : null;
+    const n = tabKeys.length;
+    const next = e.key === "ArrowRight" ? (index + 1) % n : e.key === "ArrowLeft" ? (index + n - 1) % n : e.key === "Home" ? 0 : e.key === "End" ? n - 1 : null;
     if (next !== null) { e.preventDefault(); switchTab(tabKeys[next]); $(tabButtons[next]).focus(); }
   });
   $("nameInput").addEventListener("input", () => fieldError("nameError", "", "nameInput"));
@@ -1157,8 +1194,8 @@
     }
   });
   try {
-    const cached = JSON.parse(localStorage.getItem("com_trua_ratings_v1"));
-    if (Array.isArray(cached?.stats)) applyRatings({ stats: cached.stats });
+    const cached = JSON.parse(localStorage.getItem("com_trua_ratings_v2"));
+    if (Array.isArray(cached?.dishes)) applyRatings(cached);
   } catch {}
   render();
   // Known serverless host: skip the doomed WebSocket handshake; checkCloudSync re-enables it if that changes.
@@ -1166,5 +1203,5 @@
   try { knownServerless = localStorage.getItem("com_trua_serverless") === "1"; } catch {}
   if (knownServerless) { serverless = true; checkCloudSync(); } else initWebSocket();
   fetchDateState(date);
-  fetchRatings(date);
+  fetchRatings();
 })();
