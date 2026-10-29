@@ -54,6 +54,14 @@ const app = require('../api/index');
     assert.equal(entry(await board(), 'lạc rang').count, 0);
     assert.deepEqual((await board('u3')).mine, []);
 
+    // Rows from the first release (one per person per day) count once: the latest vote wins.
+    const legacy = db.latestVotes([
+      { userId: 'u1', key: 'k', stars: 2, updatedAt: 1 },
+      { userId: 'u1', key: 'k', stars: 5, updatedAt: 3 },
+      { userId: 'u2', key: 'k', stars: 4, updatedAt: 2 }
+    ]);
+    assert.deepEqual(legacy.map(r => [r.userId, r.stars]).sort(), [['u1', 5], ['u2', 4]]);
+
     // A lone 5-star doesn't outrank a dish many people rated 4.6.
     const ranked = db.summarizeRatings([
       { key: 'a', dish: 'A', sum: 5, count: 1 },
@@ -65,5 +73,5 @@ const app = require('../api/index');
     server.close();
     fs.writeFileSync = realWrite;
   }
-  console.log('PASS: vote without ordering, one vote per person per dish, unique dishes across menus, validation, recommended needs 2+ votes, shrunk ranking.');
+  console.log('PASS: vote without ordering, one vote per person per dish, unique dishes across menus, legacy per-day rows count once, validation, recommended needs 2+ votes, shrunk ranking.');
 })().catch(err => { console.error(err); process.exit(1); });
