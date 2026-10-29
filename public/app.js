@@ -25,6 +25,9 @@
   let ws = null;
   let wsConnected = false;
   let loadFailed = false;
+  let ratingStats = new Map(); // dishKey -> { dish, avg, count, score, recommended }, all-time
+  let topDishes = [];          // same stats, best first
+  let dayRatings = [];         // [{ userId, dish, stars }] for the viewed date
 
   // ---------- Helpers ----------
   function todayVN() {
@@ -46,6 +49,11 @@
     return `${weekday.charAt(0).toUpperCase() + weekday.slice(1)}, ${d}/${m}/${y}`;
   }
   const cleanName = (s) => (s || "").trim().replace(/\s+/g, " ");
+  // Same normalization as the server: dishes are matched across days by name.
+  const dishKey = (name) => String(name || "").normalize("NFC").trim().replace(/\s+/g, " ").toLowerCase();
+  const fmtAvg = (n) => Number(n).toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const ratingSummary = (stat) => `${fmtAvg(stat.avg)} sao · ${stat.count} lượt chấm${stat.recommended ? " · Được đề cử" : ""}`;
+  const myRating = (dish) => dayRatings.find(r => r.userId === myId && dishKey(r.dish) === dishKey(dish))?.stars || 0;
 
   const myName = () => (myId && people.get(myId) && people.get(myId).name) || localStorage.getItem("com_trua_user_name") || "";
   const displayName = (o) => (o.forUser && people.get(o.forUser) && people.get(o.forUser).name) || o.name;
@@ -74,6 +82,15 @@
     return el;
   }
 
+
+  function starIcon() {
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("class", "star-icon"); svg.setAttribute("aria-hidden", "true");
+    const path = document.createElementNS(ns, "path");
+    path.setAttribute("d", "M12 2.5l2.94 5.96 6.56.95-4.75 4.63 1.12 6.54L12 17.5l-5.87 3.08 1.12-6.54L2.5 9.41l6.56-.95z");
+    svg.append(path); return svg;
+  }
 
   function fieldError(id, message, inputId) {
     $(id).textContent = message; $(id).hidden = !message;
@@ -165,10 +182,13 @@
 
   function startSmartPolling() {
     if (pollTimer) return;
+    let ticks = 0;
     pollTimer = setInterval(() => {
       // Smart Polling: only poll when tab is active/visible, not busy submitting, and WS is disconnected
       if (!wsConnected && !document.hidden && !busy) {
         fetchDateState(date, true);
+        // Ratings change slowly; refresh them about once a minute instead of every tick.
+        if (++ticks % 18 === 0) fetchRatings(date);
       }
     }, 3500);
   }
@@ -212,6 +232,8 @@
       if (msg.date === date) {
         fetchDateState(date, true);
       }
+    } else if (msg.type === "RATING_UPDATED") {
+      fetchRatings(date);
     } else if (msg.type === "PEOPLE_UPDATED") {
       if (msg.data && msg.data.person) {
         people.set(msg.data.person.id, msg.data.person);
@@ -250,6 +272,25 @@
       if (silent && menuLoaded) render(); else fallbackLocalLoad(d);
       startSmartPolling();
     }
+  }
+
+  // Ratings live outside /api/state so the 3.5s poll doesn't aggregate them every time.
+  async function fetchRatings(d) {
+    try {
+      const res = await fetch(`/api/ratings?date=${d}&_t=${Date.now()}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (d !== date) return;
+      applyRatings(data);
+      try { localStorage.setItem("com_trua_ratings_v1", JSON.stringify({ stats: topDishes })); } catch {}
+    } catch {}
+  }
+
+  function applyRatings(data) {
+    topDishes = Array.isArray(data.stats) ? data.stats : [];
+    ratingStats = new Map(topDishes.map(s => [s.key, s]));
+    if (Array.isArray(data.day)) dayRatings = data.day;
+    render();
   }
 
   function applyState(data) {
@@ -366,6 +407,7 @@
 
     $("dishTotalLabel").textContent = `${menu?.dishes?.length || 0} món`;
     renderOrderForm();
+    renderRecommendLine();
     renderMyOrderSummary();
     renderTeamOrders();
     renderMenuTab();
@@ -376,15 +418,95 @@
   function renderMyOrderSummary() {
     const order = ownOrder();
     $("myOrderSummaryCard").hidden = !order;
-    const ticket = $("myOrderTicket"); ticket.replaceChildren();
+    const ticket = $("myOrderTicket");
+    const focus = ticket.contains(document.activeElement) ? { ...document.activeElement.dataset } : null;
+    ticket.replaceChildren();
     if (!order) return;
     const name = document.createElement("strong"); name.textContent = displayName(order);
-    const detail = document.createElement("p"); detail.textContent = orderLine(order);
-    const time = document.createElement("p"); time.className = "helper-text";
-    if (order.createdAt) time.textContent = "Đặt lúc " + new Date(order.createdAt).toLocaleTimeString("vi-VN", { timeZone: TZ, hour: "2-digit", minute: "2-digit" });
-    ticket.append(name, detail, time);
+    // Rating needs a date that has happened; today counts so people can rate right after lunch.
+    const canRate = date <= todayVN();
+    const list = document.createElement("ul"); list.className = "my-order-dishes";
+    (order.dishes || []).forEach(dish => {
+      const li = document.createElement("li");
+      const label = document.createElement("span"); label.className = "my-order-dish"; label.textContent = dish;
+      li.append(label);
+      if (canRate) li.append(starInput(dish));
+      list.append(li);
+    });
+    ticket.append(name, list);
+    const extras = [RICE[order.rice], order.note].filter(Boolean).join(" · ");
+    if (extras) { const p = document.createElement("p"); p.className = "my-order-extras"; p.textContent = extras; ticket.append(p); }
+    const meta = [];
+    if (order.createdAt) meta.push("Đặt lúc " + new Date(order.createdAt).toLocaleTimeString("vi-VN", { timeZone: TZ, hour: "2-digit", minute: "2-digit" }));
+    const rated = (order.dishes || []).filter(d => myRating(d)).length;
+    if (canRate) meta.push(rated ? `Đã chấm ${rated}/${order.dishes.length} món` : "Ăn xong nhớ chấm sao để gợi ý món ngon cho mọi người");
+    const time = document.createElement("p"); time.className = "helper-text"; time.textContent = meta.join(" · ");
+    ticket.append(time);
+    if (focus?.star) ticket.querySelector(`.star-btn[data-dish="${CSS.escape(focus.dish)}"][data-star="${focus.star}"]`)?.focus({ preventScroll: true });
     $("editMyOrderBtn").disabled = !!menu?.locked || busy;
     $("deleteMyOrderBtn").disabled = !!menu?.locked || busy;
+  }
+
+  function starInput(dish) {
+    const current = myRating(dish);
+    const group = document.createElement("span"); group.className = "star-input";
+    group.setAttribute("role", "group"); group.setAttribute("aria-label", "Chấm sao " + dish);
+    for (let n = 1; n <= 5; n++) {
+      const b = document.createElement("button"); b.type = "button";
+      b.className = "star-btn" + (n <= current ? " on" : ""); b.dataset.dish = dish; b.dataset.star = String(n);
+      b.setAttribute("aria-label", n + " sao"); b.setAttribute("aria-pressed", String(n === current));
+      b.title = n === current ? "Bấm lại để bỏ chấm" : n + " sao";
+      b.append(starIcon());
+      b.addEventListener("click", () => rateDish(dish, n === current ? 0 : n));
+      group.append(b);
+    }
+    return group;
+  }
+
+  async function rateDish(dish, stars) {
+    const requestDate = date, key = dishKey(dish), before = dayRatings;
+    dayRatings = [...dayRatings.filter(r => !(r.userId === myId && dishKey(r.dish) === key)), ...(stars ? [{ userId: myId, dish, stars }] : [])];
+    renderMyOrderSummary();
+    try {
+      const res = await fetch("/api/rating", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: myId, date: requestDate, dish, stars }) });
+      if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || "Chưa lưu được đánh giá."); }
+      toast(stars ? `Đã chấm ${dish} ${stars} sao` : `Đã bỏ chấm ${dish}`);
+      fetchRatings(requestDate);
+    } catch (err) {
+      if (requestDate === date) { dayRatings = before; renderMyOrderSummary(); }
+      toast(err instanceof TypeError ? "Chưa lưu được đánh giá. Kiểm tra kết nối rồi thử lại." : err.message);
+    }
+  }
+
+  // Today's best-rated dishes, so the recommendation is visible before anyone scrolls the menu.
+  function renderRecommendLine() {
+    const picks = (menu?.dishes || [])
+      .map(dish => ({ dish, stat: ratingStats.get(dishKey(dish)) }))
+      .filter(p => p.stat?.recommended)
+      .sort((a, b) => b.stat.score - a.stat.score)
+      .slice(0, 3);
+    const line = $("recommendLine");
+    line.hidden = !picks.length;
+    line.replaceChildren(starIcon(), document.createTextNode("Đề cử hôm nay: " + picks.map(p => `${p.dish} (${fmtAvg(p.stat.avg)})`).join(", ")));
+  }
+
+  function renderTopDishes() {
+    const top = topDishes.filter(stat => stat.recommended).slice(0, 10);
+    const onMenu = new Set((menu?.dishes || []).map(dishKey));
+    $("topDishEmpty").hidden = top.length > 0;
+    $("topDishList").replaceChildren(...top.map((stat, i) => {
+      const li = document.createElement("li"); li.className = "top-dish" + (stat.recommended ? " recommended" : "");
+      const rank = document.createElement("span"); rank.className = "top-dish-rank"; rank.textContent = String(i + 1);
+      const info = document.createElement("div"); info.className = "top-dish-info";
+      const name = document.createElement("span"); name.className = "top-dish-name"; name.textContent = stat.dish;
+      const meta = document.createElement("span"); meta.className = "top-dish-meta";
+      meta.textContent = stat.count + " lượt chấm" + (onMenu.has(stat.key) ? " · Có hôm nay" : "");
+      info.append(name, meta);
+      const score = document.createElement("span"); score.className = "top-dish-score";
+      score.append(starIcon(), document.createTextNode(fmtAvg(stat.avg)));
+      score.setAttribute("aria-label", ratingSummary(stat));
+      li.append(rank, info, score); return li;
+    }));
   }
 
   function renderMenuTab() {
@@ -395,6 +517,7 @@
     $("editMenuLabel").textContent = dishes.length ? "Sửa thực đơn" : "Thêm thực đơn";
     $("menuCoverStatus").textContent = !dishes.length ? "Chưa có thực đơn" : locked ? "Đã chốt nhận đơn" : "Đang nhận đơn";
     $("menuCoverStatus").className = "status-pill-green" + (locked ? " locked" : "");
+    renderTopDishes();
     const grid = $("menuDishesGrid"); grid.replaceChildren();
     if (!dishes.length) { grid.append(emptyState("Chưa có thực đơn cho ngày này", "Bấm Thêm thực đơn hoặc lấy thực đơn hôm trước.", "book-open")); return; }
     dishes.forEach(dish => {
@@ -403,7 +526,13 @@
       const name = document.createElement("h2"); name.className = "menu-dish-name"; name.textContent = dish;
       copy.append(name);
       const count = orders.filter(o => o.dishes?.includes(dish)).length;
-      if (count) { const caption = document.createElement("p"); caption.className = "menu-dish-count"; caption.textContent = count + " suất đã đặt"; copy.append(caption); }
+      const stat = ratingStats.get(dishKey(dish));
+      const facts = [stat && ratingSummary(stat), count && count + " suất đã đặt"].filter(Boolean);
+      if (facts.length) {
+        const caption = document.createElement("p"); caption.className = "menu-dish-count" + (stat?.recommended ? " recommended" : "");
+        if (stat) caption.append(starIcon());
+        caption.append(document.createTextNode(facts.join(" · "))); copy.append(caption);
+      }
       const action = document.createElement("button"); action.type = "button";
       action.className = "menu-dish-action" + (selected.includes(dish) ? " active" : ""); action.disabled = locked || busy;
       action.append(icon(selected.includes(dish) ? "check" : "plus"), document.createTextNode(selected.includes(dish) ? "Đã chọn" : "Chọn món"));
@@ -497,6 +626,14 @@
       const name = document.createElement("span"); name.className = "dish-choice-title"; name.textContent = dish;
       if (chosen) card.append(icon("check"));
       card.append(name);
+      const stat = ratingStats.get(dishKey(dish));
+      if (stat) {
+        const rating = document.createElement("span"); rating.className = "dish-rating";
+        rating.append(starIcon(), document.createTextNode(fmtAvg(stat.avg)));
+        card.append(rating); card.title = ratingSummary(stat);
+        card.setAttribute("aria-label", `${dish}, ${ratingSummary(stat)}`);
+        if (stat.recommended) card.classList.add("recommended");
+      }
       const count = orders.filter(o => o.dishes?.includes(dish)).length;
       if (count) { const badge = document.createElement("span"); badge.className = "dish-count"; badge.textContent = "×" + count; badge.title = count + " người đã chọn"; card.append(badge); }
       card.addEventListener("click", () => {
@@ -865,9 +1002,11 @@
       date = d;
       menu = null; orders = []; menuLoaded = false; loadFailed = false;
       editingMenu = false;
+      dayRatings = [];
       resetForm();
       render();
       fetchDateState(date);
+      fetchRatings(date);
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: "SUBSCRIBE_DATE", date }));
       }
@@ -937,6 +1076,7 @@
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden && !wsConnected) {
       fetchDateState(date, true);
+      fetchRatings(date);
     }
   });
 
@@ -1016,10 +1156,15 @@
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     }
   });
+  try {
+    const cached = JSON.parse(localStorage.getItem("com_trua_ratings_v1"));
+    if (Array.isArray(cached?.stats)) applyRatings({ stats: cached.stats });
+  } catch {}
   render();
   // Known serverless host: skip the doomed WebSocket handshake; checkCloudSync re-enables it if that changes.
   let knownServerless = false;
   try { knownServerless = localStorage.getItem("com_trua_serverless") === "1"; } catch {}
   if (knownServerless) { serverless = true; checkCloudSync(); } else initWebSocket();
   fetchDateState(date);
+  fetchRatings(date);
 })();

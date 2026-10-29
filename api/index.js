@@ -115,7 +115,43 @@ app.post('/api/people', async (req, res) => {
   }
 });
 
-// 6. Network info (Office Wi-Fi IP helper)
+// 6. Dish ratings: all-time stats plus the raw ratings for one day
+app.get('/api/ratings', async (req, res) => {
+  try {
+    res.json(await db.getRatings(req.query.date || db.todayVN()));
+  } catch (err) {
+    console.error('Lỗi /api/ratings:', err);
+    res.status(500).json({ error: 'Lỗi máy chủ khi lấy đánh giá' });
+  }
+});
+
+app.post('/api/rating', async (req, res) => {
+  try {
+    const { userId, date, dish, stars } = req.body;
+    if (typeof userId !== 'string' || !userId || userId.length > 80 ||
+        typeof dish !== 'string' || !dish.trim() || dish.length > 120 ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(date || '') || !Number.isInteger(stars) || stars < 0 || stars > 5) {
+      return res.status(400).json({ error: 'Đánh giá không hợp lệ' });
+    }
+    if (date > db.todayVN()) {
+      return res.status(400).json({ error: 'Chưa ăn thì chưa chấm được nhé.' });
+    }
+
+    const rating = await db.saveRating({ userId, date, dish, stars });
+    if (broadcastHook) {
+      broadcastHook('RATING_UPDATED', date, { rating });
+    }
+    res.json({ success: true, rating });
+  } catch (err) {
+    if (err.message === 'NOT_ORDERED') {
+      return res.status(403).json({ error: 'Bạn chỉ chấm được món mình đã đặt.' });
+    }
+    console.error('Lỗi /api/rating:', err);
+    res.status(500).json({ error: err.message || 'Lỗi khi lưu đánh giá' });
+  }
+});
+
+// 7. Network info (Office Wi-Fi IP helper)
 app.get('/api/network', (req, res) => {
   const PORT = process.env.PORT || 3000;
   const interfaces = os.networkInterfaces();
@@ -135,7 +171,7 @@ app.get('/api/network', (req, res) => {
   });
 });
 
-// 7. Health check
+// 8. Health check
 app.get('/api/health', async (req, res) => {
   res.json({
     status: 'ok',
