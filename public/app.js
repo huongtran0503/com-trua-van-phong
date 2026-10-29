@@ -608,40 +608,6 @@
       li.append(left, acts);
       return li;
     }));
-
-    renderTally();
-  }
-
-  function renderTally() {
-    const container = $("tallyCards");
-    if (!container) return;
-    container.replaceChildren();
-
-    if (!orders.length) {
-      container.innerHTML = "<span style='font-size:0.82rem;color:var(--text-muted)'>Chưa có đơn đặt</span>";
-      return;
-    }
-
-    const dishTally = {};
-    const riceTally = {};
-    orders.forEach(o => {
-      (o.dishes || []).forEach(d => {
-        dishTally[d] = (dishTally[d] || 0) + 1;
-      });
-      if (o.rice) {
-        const rName = RICE[o.rice] || o.rice;
-        riceTally[rName] = (riceTally[rName] || 0) + 1;
-      }
-    });
-
-    const add = (name, count) => {
-      const row = document.createElement("div"); row.className = "tally-chip";
-      const label = document.createElement("span"); label.textContent = name;
-      const number = document.createElement("strong"); number.textContent = count + " suất";
-      row.append(label, number); container.append(row);
-    };
-    Object.entries(dishTally).forEach(([name, count]) => add(name, count));
-    Object.entries(riceTally).forEach(([name, count]) => add(name, count));
   }
 
   function messageText() {
@@ -660,7 +626,6 @@
     const locked = !!(menu && menu.locked);
     $("lockBtn").textContent = locked ? "Mở nhận đơn" : "Chốt đơn";
     $("lockBtn").disabled = !canLock();
-    $("copyTallyBtn").disabled = !orders.length;
     $("lockHint").textContent = locked ? "Đang khóa, không nhận đơn mới" : "";
   }
 
@@ -1027,28 +992,6 @@
     btn.dataset.armed = "true"; btn.textContent = "Xác nhận hủy?";
     setTimeout(() => { delete btn.dataset.armed; btn.textContent = "Hủy đơn"; }, 3000);
   });
-
-  if ($("copyTallyBtn")) {
-    $("copyTallyBtn").addEventListener("click", () => {
-      if (!orders.length) { toast("Chưa có đơn để tổng hợp"); return; }
-      const dishTally = {};
-      const riceTally = {};
-      orders.forEach(o => {
-        (o.dishes || []).forEach(d => { dishTally[d] = (dishTally[d] || 0) + 1; });
-        if (o.rice) {
-          const rName = RICE[o.rice] || o.rice;
-          riceTally[rName] = (riceTally[rName] || 0) + 1;
-        }
-      });
-      const lines = ["TỔNG HỢP CƠM TRƯA (" + orders.length + " suất):"];
-      Object.entries(dishTally).forEach(([k, v]) => lines.push(`- ${k}: ${v} suất`));
-      if (Object.keys(riceTally).length) {
-        lines.push("\nLượng cơm:");
-        Object.entries(riceTally).forEach(([k, v]) => lines.push(`- ${k}: ${v}`));
-      }
-      copyText(lines.join("\n"), "Đã copy tổng hợp món!");
-    });
-  }
 
   // ---------- Init ----------
   // Roving focus for the tablist; preserve native button keyboard behavior.
